@@ -17,7 +17,7 @@ router.get("/me", authentication.loginRequired, userController.getCurrentUser);
 /**
  * @route PUT /users/:userId
  * @description  Update user profile
- * @body {userName, gender, phone, address, avatarUrl}
+ * @body {userName, gender, birthday, phone, address, avatarUrl}
  * @access Login required
  */
 router.put(
@@ -27,8 +27,12 @@ router.put(
     param("userId").exists().isString().custom(validators.checkObjectId),
     body("gender")
       .optional()
-      .isIn(["male", "female", "other"])
+      .isIn(["Male", "Female", "Other"])
       .withMessage("Gender value is invalid"),
+    body("birthday")
+      .optional()
+      .isISO8601()
+      .withMessage("Birthday wrong format"),
     body("phone")
       .optional()
       .isString()

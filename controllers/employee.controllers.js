@@ -3,13 +3,14 @@ const LeaveBalance = require("../models/LeaveBalance");
 const LeaveCategory = require("../models/LeaveCategory");
 const Role = require("../models/Role");
 const User = require("../models/User");
+const { MANAGER } = require("../variables/constants");
 const START_DATE = process.env.START_DATE;
 
 const employeeController = {};
 
 employeeController.createNewEmployee = catchAsync(async (req, res, next) => {
   // Get data from request
-  let { fullName, email, role, reportTo } = req.body;
+  let { fullName, email, role, reportTo, birthday } = req.body;
 
   // Business Logic Validation
   let employee = await User.findOne({ email });
@@ -21,13 +22,14 @@ employeeController.createNewEmployee = catchAsync(async (req, res, next) => {
     );
 
   // Process
-  const roleInfo = await Role.findOne({ roleId: role });
+  const roleInfo = await Role.findOne({ name: role });
 
   employee = await User.create({
     fullName,
     email,
     role: roleInfo._id,
     reportTo,
+    birthday,
   });
 
   const leaveCategoryList = await LeaveCategory.find({
@@ -46,11 +48,9 @@ employeeController.createNewEmployee = catchAsync(async (req, res, next) => {
       user: employee._id,
       leaveCategory: category._id,
       totalUsed: 0,
-      totalRemaining: category.totalDays,
       expiredDate: expiredDate,
     });
 
-    // Save the leave balance
     await newLeaveBalance.save();
   });
 
@@ -89,7 +89,7 @@ employeeController.getEmployeesAdmin = catchAsync(async (req, res, next) => {
 
   // Process
 
-  const filterConditions = [];
+  const filterConditions = [{ isDeleted: false }];
 
   if (filter.userName) {
     filterConditions.push({
@@ -105,13 +105,14 @@ employeeController.getEmployeesAdmin = catchAsync(async (req, res, next) => {
     filterConditions.push({ status: filter.status });
   }
   if (filter.role) {
-    const roleObjectId = await Role.find({ roleId: filter.role });
-    filterConditions.push({ role: roleObjectId });
+    const roleInfo = await Role.find({ name: filter.role });
+    filterConditions.push({ role: roleInfo._id });
   }
 
   const filterCriteria = filterConditions.length
     ? { $and: filterConditions }
     : {};
+
   const count = await User.countDocuments(filterCriteria);
   const totalPages = Math.ceil(count / limit);
   const offset = limit * (page - 1);
@@ -155,7 +156,7 @@ employeeController.getEmployeesManager = catchAsync(async (req, res, next) => {
 
   // Process
 
-  const filterConditions = [{ reportTo: currentUserId }];
+  const filterConditions = [{ reportTo: currentUserId, isDeleted: false }];
 
   if (filter.userName) {
     filterConditions.push({
@@ -194,67 +195,39 @@ employeeController.getEmployeesManager = catchAsync(async (req, res, next) => {
   );
 });
 
-employeeController.getSingleEmployeeAdmin = catchAsync(
-  async (req, res, next) => {
-    // Get data from request
+employeeController.getSingleEmployee = catchAsync(async (req, res, next) => {
+  // Get data from request
 
-    const currentUserId = req.userId;
-    const selectedEmployeeId = req.params.employeeId;
+  const currentUserId = req.userId;
+  const selectedEmployeeId = req.params.employeeId;
 
-    // Business Logic Validation - Process
-    const selectedEmployee = await User.findById(selectedEmployeeId);
-    if (!selectedEmployee)
-      throw new AppError(
-        400,
-        "Employee not found",
-        "Get Single Employee Admin Error"
-      );
+  // Business Logic Validation - Process
 
-    // Response
-    return sendResponse(
-      res,
-      200,
-      true,
-      selectedEmployee,
-      null,
-      "Get Single Employee Admin Successfully"
-    );
-  }
-);
+  const currentUser = await User.findById(currentUserId).populate("role");
 
-employeeController.getSingleEmployeeManager = catchAsync(
-  async (req, res, next) => {
-    // Get data from request
+  if (
+    currentUser.role.name === MANAGER &&
+    selectedEmployee.reportTo.toString() !== currentUserId
+  )
+    throw new AppError(403, "Access denied", "Get Single Employee Error");
 
-    const currentUserId = req.userId;
-    const selectedEmployeeId = req.params.employeeId;
+  const selectedEmployee = await User.findOne({
+    _id: selectedEmployeeId,
+    isDeleted: false,
+  });
+  if (!selectedEmployee)
+    throw new AppError(400, "Employee not found", "Get Single Employee Error");
 
-    // Business Logic Validation - Process
-    const selectedEmployee = await User.findById(selectedEmployeeId);
-    if (!selectedEmployee)
-      throw new AppError(
-        400,
-        "Employee not found",
-        "Get Single Employee Manager Error"
-      );
-
-    if (selectedEmployee.reportTo.toString() !== currentUserId)
-      throw new AppError(
-        403,
-        "Access denied",
-        "Get Single Employee Manager Error"
-      );
-    // Response
-    return sendResponse(
-      res,
-      200,
-      true,
-      selectedEmployee,
-      null,
-      "Get Single Employee Manager Successfully"
-    );
-  }
-);
+  // Response
+  return sendResponse(
+    res,
+    200,
+    true,
+    selectedEmployee,
+    null,
+    "Get Single Employee Successfully"
+  );
+});
 
 employeeController.updateEmployee = catchAsync(async (req, res, next) => {
   // Get data from request
@@ -263,7 +236,10 @@ employeeController.updateEmployee = catchAsync(async (req, res, next) => {
 
   // Business Logic Validation
 
-  let updatedEmployee = await User.findById(updatedEmployeeId);
+  let updatedEmployee = await User.findOne({
+    _id: updatedEmployeeId,
+    isDeleted: false,
+  });
   if (!updatedEmployee)
     throw new AppError(400, "Employee not found", "Update Employee Error");
 
@@ -295,6 +271,7 @@ employeeController.updateEmployee = catchAsync(async (req, res, next) => {
     "reportTo",
     "gender",
     "phone",
+    "birthday",
     "address",
     "avatarUrl",
   ];
@@ -321,7 +298,10 @@ employeeController.terminateEmployee = catchAsync(async (req, res, next) => {
 
   // Business Logic Validation
 
-  let terminatedEmployee = await User.findById(terminatedEmployeeId);
+  let terminatedEmployee = await User.findOne({
+    _id: terminatedEmployeeId,
+    isDeleted: false,
+  });
   if (!terminatedEmployee)
     throw new AppError(400, "Employee not found", "Terminate Employee Error");
 
@@ -346,10 +326,15 @@ employeeController.deleteEmployee = catchAsync(async (req, res, next) => {
 
   // Business Logic Validation
 
-  let deletedEmployee = await User.findByIdAndDelete(deletedEmployeeId);
+  let deletedEmployee = await User.findOneAndUpdate(
+    {
+      _id: deletedEmployeeId,
+    },
+    { isDeleted: true },
+    { new: true }
+  );
   if (!deletedEmployee)
     throw new AppError(400, "Employee not found", "Delete Employee Error");
-  await LeaveBalance.deleteMany({ user: deletedEmployeeId });
 
   // Response
   return sendResponse(

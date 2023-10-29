@@ -8,7 +8,7 @@ userController.getCurrentUser = catchAsync(async (req, res, next) => {
   const currentUserId = req.userId;
 
   // Business Logic Validation - Process
-  const user = await User.findById(currentUserId);
+  const user = await User.findById(currentUserId).populate("role");
   if (!user)
     throw new AppError(400, "User not found", "Get Current User Error");
 
@@ -37,8 +37,11 @@ userController.updateProfile = catchAsync(async (req, res, next) => {
   if (!updatedUser)
     throw new AppError(400, "User not found", "Update User Error");
 
-  const userSameName = await User.findOne({ userName });
-  if (userSameName && userSameName._id !== updatedUserId)
+  const userSameName = await User.find({
+    userName,
+    _id: { $ne: updatedUserId },
+  });
+  if (userSameName.length !== 0)
     throw new AppError(
       400,
       "User Name has been already taken",
@@ -46,7 +49,14 @@ userController.updateProfile = catchAsync(async (req, res, next) => {
     );
 
   // Process
-  const allows = ["userName", "gender", "phone", "address", "avatarUrl"];
+  const allows = [
+    "userName",
+    "gender",
+    "birthday",
+    "phone",
+    "address",
+    "avatarUrl",
+  ];
   allows.forEach((field) => {
     if (req.body[field] !== undefined) {
       updatedUser[field] = req.body[field];

@@ -5,17 +5,18 @@ const { body, param } = require("express-validator");
 const authentication = require("../middlewares/authentication");
 const validators = require("../middlewares/validators");
 const authorization = require("../middlewares/authorization");
+const { ADMIN_OFFICE, EMPLOYEE, MANAGER } = require("../variables/constants");
 
 /**
  * @route POST /employees
  * @description Create a new employee
- * @body { fullName, email, role, reportTo}
+ * @body { fullName, email, role, reportTo, birthday}
  * @access  Login required, limit access by role (admin office)
  */
 router.post(
   "/",
   authentication.loginRequired,
-  authorization.specificRoleRequired("admin office"),
+  authorization.specificRoleRequired([ADMIN_OFFICE]),
   validators.validate([
     body("fullName", "Full Name is required").trim().exists().notEmpty(),
     body("email")
@@ -29,9 +30,13 @@ router.post(
       .exists()
       .notEmpty()
       .withMessage("Role is required")
-      .isIn([1, 2, 3])
+      .isIn([ADMIN_OFFICE, MANAGER, EMPLOYEE])
       .withMessage("Role value is invalid"),
     body("reportTo").exists().isString().custom(validators.checkObjectId),
+    body("birthday")
+      .optional()
+      .isISO8601()
+      .withMessage("Birthday wrong format"),
   ]),
   employeeController.createNewEmployee
 );
@@ -44,7 +49,7 @@ router.post(
 router.get(
   "/admin",
   authentication.loginRequired,
-  authorization.specificRoleRequired("admin office"),
+  authorization.specificRoleRequired([ADMIN_OFFICE]),
   employeeController.getEmployeesAdmin
 );
 
@@ -56,38 +61,23 @@ router.get(
 router.get(
   "/manager",
   authentication.loginRequired,
-  authorization.specificRoleRequired("manager"),
+  authorization.specificRoleRequired([MANAGER]),
   employeeController.getEmployeesManager
 );
 
 /**
- * @route GET /employees/admin/:employeeId
+ * @route GET /employees/:employeeId
  * @description Get specific employee
- * @access Login required, limit access by role (admin office)
+ * @access Login required, limit access by role (admin office, manager)
  */
 router.get(
-  "/admin/:employeeId",
+  "/:employeeId",
   authentication.loginRequired,
-  authorization.specificRoleRequired("admin office"),
+  authorization.specificRoleRequired([ADMIN_OFFICE, MANAGER]),
   validators.validate([
     param("employeeId").exists().isString().custom(validators.checkObjectId),
   ]),
-  employeeController.getSingleEmployeeAdmin
-);
-
-/**
- * @route GET /employees/manager/:employeeId
- * @description Get specific employee
- * @access Login required, limit access by role (manager)
- */
-router.get(
-  "/manager/:employeeId",
-  authentication.loginRequired,
-  authorization.specificRoleRequired("manager"),
-  validators.validate([
-    param("employeeId").exists().isString().custom(validators.checkObjectId),
-  ]),
-  employeeController.getSingleEmployeeManager
+  employeeController.getSingleEmployee
 );
 
 /**
@@ -99,7 +89,7 @@ router.get(
 router.put(
   "/update/:employeeId",
   authentication.loginRequired,
-  authorization.specificRoleRequired("admin office"),
+  authorization.specificRoleRequired([ADMIN_OFFICE]),
   validators.validate([
     param("employeeId").exists().isString().custom(validators.checkObjectId),
     body("email")
@@ -109,12 +99,12 @@ router.put(
       .withMessage("Invalid email"),
     body("role")
       .optional()
-      .isIn(["employee", "manager", "admin office"])
+      .isIn([ADMIN_OFFICE, MANAGER, EMPLOYEE])
       .withMessage("Role value is invalid"),
     body("reportTo").optional().isString().custom(validators.checkObjectId),
     body("gender")
       .optional()
-      .isIn(["male", "female", "other"])
+      .isIn(["Male", "Female", "Other"])
       .withMessage("Gender value is invalid"),
     body("phone")
       .optional()
@@ -133,7 +123,7 @@ router.put(
 router.put(
   "/terminate/:employeeId",
   authentication.loginRequired,
-  authorization.specificRoleRequired("admin office"),
+  authorization.specificRoleRequired([ADMIN_OFFICE]),
   validators.validate([
     param("employeeId").exists().isString().custom(validators.checkObjectId),
   ]),
@@ -148,7 +138,7 @@ router.put(
 router.delete(
   "/delete/:employeeId",
   authentication.loginRequired,
-  authorization.specificRoleRequired("admin office"),
+  authorization.specificRoleRequired([ADMIN_OFFICE]),
   validators.validate([
     param("employeeId").exists().isString().custom(validators.checkObjectId),
   ]),

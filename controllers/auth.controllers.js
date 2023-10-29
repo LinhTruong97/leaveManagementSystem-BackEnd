@@ -27,6 +27,7 @@ authController.login = catchAsync(async (req, res, next) => {
     "Login Successfully"
   );
 });
+
 authController.accountSetup = catchAsync(async (req, res, next) => {
   // Get data from request
   const userId = req.params.userId;
@@ -55,8 +56,6 @@ authController.accountSetup = catchAsync(async (req, res, next) => {
   user.password = password;
   user.status = "active";
   await user.save();
-
-  // const accessToken = await user.generateToken();
 
   // Response
   sendResponse(res, 200, true, user, null, "Setup Account Successfully");

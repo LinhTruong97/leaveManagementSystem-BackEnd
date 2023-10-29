@@ -13,6 +13,7 @@ const leaveCategorySchema = Schema(
       ref: "Role",
     },
     totalDays: { type: Number },
+    displayOrder: { type: Number },
   },
   { timestamp: true }
 );

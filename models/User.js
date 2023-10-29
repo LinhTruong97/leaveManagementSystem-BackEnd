@@ -27,13 +27,14 @@ const userSchema = Schema(
     },
     gender: {
       type: String,
-      enum: ["male", "female", "other"],
-      default: "other",
+      enum: ["Male", "Female", "Other"],
+      default: "Other",
     },
+    birthday: { type: Date },
     phone: { type: String, default: "" },
     address: { type: String, default: "" },
     avatarUrl: { type: String, default: "" },
-    leaveCount: { type: Number, default: 0 },
+    isDeleted: { type: Boolean, default: false, select: false },
   },
   { timestamp: true }
 );

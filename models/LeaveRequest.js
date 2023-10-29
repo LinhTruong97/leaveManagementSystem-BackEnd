@@ -22,22 +22,22 @@ const leaveRequestSchema = Schema(
     fromType: {
       type: String,
       require: true,
-      enum: ["full", "half morning", "half afternoon"],
+      enum: ["full", "half_morning", "half_afternoon"],
     },
     toDate: { type: Date, require: true },
     toType: {
       type: String,
       require: true,
-      enum: ["full", "half morning", "half afternoon"],
+      enum: ["full", "half_morning", "half_afternoon"],
     },
     totalDays: { type: Number },
     reason: { type: String, require: true },
-    document: { type: String, require: false },
     status: {
       type: String,
       enum: ["pending", "approved", "rejected"],
       default: "pending",
     },
+    isDeleted: { type: Boolean, default: false, select: false },
   },
   { timestamp: true }
 );
