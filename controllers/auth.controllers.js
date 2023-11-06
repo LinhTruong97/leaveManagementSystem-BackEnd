@@ -41,7 +41,10 @@ authController.accountSetup = catchAsync(async (req, res, next) => {
   if (user.status !== "pending")
     throw new AppError(400, "Already set up account", "Setup Account Error");
 
-  const userSameName = await User.findOne({ userName });
+  const userSameName = await User.findOne({
+    userName,
+    _id: { $ne: userId },
+  });
   if (userSameName)
     throw new AppError(
       400,

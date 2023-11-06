@@ -42,27 +42,27 @@ router.post(
 );
 
 /**
- * @route GET /employees/admin?page=1?&limit=10
+ * @route GET /employees?page=1?&limit=10
  * @description Get the list of full employees
- * @access Login required, limit access by role (admin office)
+ * @access Login required, limit access by role
  */
 router.get(
-  "/admin",
+  "/",
   authentication.loginRequired,
-  authorization.specificRoleRequired([ADMIN_OFFICE]),
-  employeeController.getEmployeesAdmin
+  authorization.specificRoleRequired([ADMIN_OFFICE, MANAGER]),
+  employeeController.getEmployees
 );
 
 /**
- * @route GET /employees/manager?page=1?&limit=10
- * @description Get the list of employees incharge
- * @access Login required, limit access by role (manager)
+ * @route GET /employees/report-to
+ * @description Get the list of full reportTo employees
+ * @access Login required, limit access by role (admin office)
  */
 router.get(
-  "/manager",
+  "/report-to",
   authentication.loginRequired,
-  authorization.specificRoleRequired([MANAGER]),
-  employeeController.getEmployeesManager
+  authorization.specificRoleRequired([ADMIN_OFFICE]),
+  employeeController.getReportToEmployees
 );
 
 /**
@@ -83,7 +83,7 @@ router.get(
 /**
  * @route PUT /employees/update/:employeeId
  * @description Update an employee's profile
- * @body {userName, fullName, email, role, reportTo, gender, phone, address}
+ * @body { userName ,fullName, email, role, reportTo, gender, phone, address, birthday}
  * @access Login required, limit access by role (admin office)
  */
 router.put(
@@ -92,25 +92,32 @@ router.put(
   authorization.specificRoleRequired([ADMIN_OFFICE]),
   validators.validate([
     param("employeeId").exists().isString().custom(validators.checkObjectId),
+    body("userName", "Full Name is required").trim().exists().notEmpty(),
+    body("fullName", "Full Name is required").trim().exists().notEmpty(),
     body("email")
-      .optional()
       .isEmail()
       .normalizeEmail({ gmail_remove_dots: false })
       .withMessage("Invalid email"),
     body("role")
-      .optional()
       .isIn([ADMIN_OFFICE, MANAGER, EMPLOYEE])
       .withMessage("Role value is invalid"),
     body("reportTo").optional().isString().custom(validators.checkObjectId),
     body("gender")
-      .optional()
       .isIn(["Male", "Female", "Other"])
       .withMessage("Gender value is invalid"),
     body("phone")
-      .optional()
       .isString()
       .isLength({ min: 10, max: 11 })
       .withMessage("Phone number is invalid"),
+    body("address")
+      .trim()
+      .exists()
+      .notEmpty()
+      .withMessage("Address is required"),
+    body("birthday")
+      .optional()
+      .isISO8601()
+      .withMessage("Birthday wrong format"),
   ]),
   employeeController.updateEmployee
 );
@@ -128,6 +135,21 @@ router.put(
     param("employeeId").exists().isString().custom(validators.checkObjectId),
   ]),
   employeeController.terminateEmployee
+);
+
+/**
+ * @route PUT /employees/reactivate/:employeeId
+ * @description Reactivate an employee
+ * @access Login required, limit access by role (admin office)
+ */
+router.put(
+  "/reactivate/:employeeId",
+  authentication.loginRequired,
+  authorization.specificRoleRequired([ADMIN_OFFICE]),
+  validators.validate([
+    param("employeeId").exists().isString().custom(validators.checkObjectId),
+  ]),
+  employeeController.reactivateEmployee
 );
 
 /**

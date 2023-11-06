@@ -19,13 +19,8 @@ const leaveRequestSchema = Schema(
       ref: "LeaveCategory",
     },
     fromDate: { type: Date, require: true },
-    fromType: {
-      type: String,
-      require: true,
-      enum: ["full", "half_morning", "half_afternoon"],
-    },
     toDate: { type: Date, require: true },
-    toType: {
+    type: {
       type: String,
       require: true,
       enum: ["full", "half_morning", "half_afternoon"],

@@ -21,27 +21,15 @@ router.get(
 
 /**
  *
- * @route GET /leaves/admin
- * @description Get the list of leaves full employees
- * @access Login required, limit role (admin office)
+ * @route GET /leaves/
+ * @description Get the list of full employees leaves
+ * @access Login required, limit role
  */
 router.get(
-  "/admin",
+  "/",
   authentication.loginRequired,
-  authorization.specificRoleRequired([ADMIN_OFFICE]),
-  leaveController.getEmployeeLeaveAdmin
-);
-
-/**
- * @route GET /leaves/manager
- * @description Get the list of leaves of team member
- * @access Login required, limit role (manager)
- */
-router.get(
-  "/manager",
-  authentication.loginRequired,
-  authorization.specificRoleRequired([MANAGER]),
-  leaveController.getEmployeeLeaveManager
+  authorization.specificRoleRequired([ADMIN_OFFICE, MANAGER]),
+  leaveController.getEmployeeLeave
 );
 
 /**
@@ -52,6 +40,7 @@ router.get(
 router.get(
   "/pending",
   authentication.loginRequired,
+  authorization.specificRoleRequired([ADMIN_OFFICE, MANAGER]),
   leaveController.getPendingLeave
 );
 
@@ -83,7 +72,7 @@ router.get(
 /**
  * @route POST /leaves
  * @description Create a leave request
- * @body { categoryName, fromDate, fromType, toDate, toType, reason}
+ * @body { categoryName, fromDate, toDate, type, reason}
  * @access Login required
  */
 router.post(
@@ -100,24 +89,19 @@ router.post(
       .withMessage("From date is required")
       .isISO8601()
       .withMessage("From date wrong format"),
-    body("fromType")
+    body("type")
       .exists()
       .notEmpty()
-      .withMessage("From type is required")
+      .withMessage("Leave type is required")
       .isIn(["full", "half_morning", "half_afternoon"])
-      .withMessage("From type value is invalid"),
+      .withMessage("Leave type value is invalid"),
     body("toDate")
       .exists()
       .notEmpty()
       .withMessage("To date is required")
       .isISO8601()
       .withMessage("To date wrong format"),
-    body("toType")
-      .exists()
-      .notEmpty()
-      .withMessage("To type is required")
-      .isIn(["full", "half_morning", "half_afternoon"])
-      .withMessage("To type value is invalid"),
+
     body("reason").exists().notEmpty().withMessage("Reason is required"),
   ]),
   leaveController.createLeave
@@ -126,7 +110,7 @@ router.post(
 /**
  * @route PUT /leaves/:requestId
  * @description Update a leave request
- * @body { fromDate, fromType, toDate, toType, reason}
+ * @body { fromDate, toDate, type, reason}
  * @limit only when status is pending
  * @access Login required
  */
@@ -144,24 +128,18 @@ router.put(
       .withMessage("From date is required")
       .isISO8601()
       .withMessage("From date wrong format"),
-    body("fromType")
-      .exists()
-      .notEmpty()
-      .withMessage("From type is required")
-      .isIn(["full", "half_morning", "half_afternoon"])
-      .withMessage("From type value is invalid"),
     body("toDate")
       .exists()
       .notEmpty()
       .withMessage("To date is required")
       .isISO8601()
       .withMessage("To date wrong format"),
-    body("toType")
+    body("type")
       .exists()
       .notEmpty()
-      .withMessage("To type is required")
+      .withMessage("Leave type is required")
       .isIn(["full", "half_morning", "half_afternoon"])
-      .withMessage("To type value is invalid"),
+      .withMessage("Leave type value is invalid"),
     body("reason").exists().notEmpty().withMessage("Reason is required"),
     param("requestId").exists().isString().custom(validators.checkObjectId),
   ]),

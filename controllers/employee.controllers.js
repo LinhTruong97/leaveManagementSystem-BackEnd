@@ -3,7 +3,7 @@ const LeaveBalance = require("../models/LeaveBalance");
 const LeaveCategory = require("../models/LeaveCategory");
 const Role = require("../models/Role");
 const User = require("../models/User");
-const { MANAGER } = require("../variables/constants");
+const { MANAGER, ADMIN_OFFICE } = require("../variables/constants");
 const START_DATE = process.env.START_DATE;
 
 const employeeController = {};
@@ -65,8 +65,8 @@ employeeController.createNewEmployee = catchAsync(async (req, res, next) => {
   );
 });
 
-employeeController.getEmployeesAdmin = catchAsync(async (req, res, next) => {
-  const allowedFilter = ["userName", "fullName", "status", "role"];
+employeeController.getEmployees = catchAsync(async (req, res, next) => {
+  const allowedFilter = ["fullName", "status", "role"];
 
   // Get data from request
   const currentUserId = req.userId;
@@ -82,30 +82,33 @@ employeeController.getEmployeesAdmin = catchAsync(async (req, res, next) => {
       throw new AppError(
         400,
         `Query ${key} is not allowed`,
-        "Get Admin's Employees Error"
+        "Get List of Employees Error"
       );
     }
   });
+
+  const currentUser = await User.findById(currentUserId).populate("role");
 
   // Process
 
   const filterConditions = [{ isDeleted: false }];
 
-  if (filter.userName) {
-    filterConditions.push({
-      userName: { $regex: filter.userName, $options: "i" },
-    });
+  if (currentUser.role.name === MANAGER) {
+    filterConditions.push({ reportTo: currentUserId });
   }
+
   if (filter.fullName) {
     filterConditions.push({
       fullName: { $regex: filter.fullName, $options: "i" },
     });
   }
+
   if (filter.status) {
     filterConditions.push({ status: filter.status });
   }
   if (filter.role) {
-    const roleInfo = await Role.find({ name: filter.role });
+    const roleInfo = await Role.findOne({ name: filter.role });
+
     filterConditions.push({ role: roleInfo._id });
   }
 
@@ -116,9 +119,8 @@ employeeController.getEmployeesAdmin = catchAsync(async (req, res, next) => {
   const count = await User.countDocuments(filterCriteria);
   const totalPages = Math.ceil(count / limit);
   const offset = limit * (page - 1);
-
-  let employees = await User.find(filterCriteria)
-    .sort({ createdAt: -1 })
+  let employeeList = await User.find(filterCriteria)
+    .populate("role")
     .skip(offset)
     .limit(limit);
 
@@ -127,71 +129,36 @@ employeeController.getEmployeesAdmin = catchAsync(async (req, res, next) => {
     res,
     200,
     true,
-    { employees, totalPages, count },
+    { employeeList, totalPages, count },
     null,
-    "Get Admin's Employees Successfully"
+    "Get List of Employees Successfully"
   );
 });
 
-employeeController.getEmployeesManager = catchAsync(async (req, res, next) => {
+employeeController.getReportToEmployees = catchAsync(async (req, res, next) => {
   // Get data from request
   const currentUserId = req.userId;
 
-  let { page, limit, ...filter } = req.query;
-
-  page = parseInt(page) || 1;
-  limit = parseInt(limit) || 10;
-
-  // Business Logic Validation
-  const allowedFilter = ["userName", "fullName", "status"];
-  Object.keys(filter).forEach((key) => {
-    if (!allowedFilter.includes(key)) {
-      throw new AppError(
-        400,
-        `Query ${key} is not allowed`,
-        "Get Manager's Employees Error"
-      );
-    }
-  });
-
   // Process
 
-  const filterConditions = [{ reportTo: currentUserId, isDeleted: false }];
-
-  if (filter.userName) {
-    filterConditions.push({
-      userName: { $regex: filter.userName, $options: "i" },
-    });
-  }
-  if (filter.fullName) {
-    filterConditions.push({
-      fullName: { $regex: filter.fullName, $options: "i" },
-    });
-  }
-  if (filter.status) {
-    filterConditions.push({ status: filter.status });
-  }
-
-  const filterCriteria = filterConditions.length
-    ? { $and: filterConditions }
-    : {};
-  const count = await User.countDocuments(filterCriteria);
-  const totalPages = Math.ceil(count / limit);
-  const offset = limit * (page - 1);
-
-  let employees = await User.find(filterCriteria)
-    .sort({ createdAt: -1 })
-    .skip(offset)
-    .limit(limit);
+  const roleId = await Role.find({
+    $or: [{ name: MANAGER }, { name: ADMIN_OFFICE }],
+  });
+  let employeeList = await User.find({
+    isDeleted: false,
+    role: { $in: roleId.map((role) => role._id) },
+  })
+    .populate("role")
+    .sort({ createdAt: -1 });
 
   // Response
   return sendResponse(
     res,
     200,
     true,
-    { employees, totalPages, count },
+    employeeList,
     null,
-    "Get Manager's Employees Successfully"
+    "Get List of Employees Successfully"
   );
 });
 
@@ -205,25 +172,30 @@ employeeController.getSingleEmployee = catchAsync(async (req, res, next) => {
 
   const currentUser = await User.findById(currentUserId).populate("role");
 
+  const selectedEmployee = await User.findOne({
+    _id: selectedEmployeeId,
+    isDeleted: false,
+  }).populate("role");
+  const selectedReportToEmployee = await User.findOne({
+    _id: selectedEmployee.reportTo,
+    isDeleted: false,
+  }).populate("role");
+
+  if (!selectedEmployee)
+    throw new AppError(400, "Employee not found", "Get Single Employee Error");
+
   if (
     currentUser.role.name === MANAGER &&
     selectedEmployee.reportTo.toString() !== currentUserId
   )
     throw new AppError(403, "Access denied", "Get Single Employee Error");
 
-  const selectedEmployee = await User.findOne({
-    _id: selectedEmployeeId,
-    isDeleted: false,
-  });
-  if (!selectedEmployee)
-    throw new AppError(400, "Employee not found", "Get Single Employee Error");
-
   // Response
   return sendResponse(
     res,
     200,
     true,
-    selectedEmployee,
+    { selectedEmployee, selectedReportToEmployee },
     null,
     "Get Single Employee Successfully"
   );
@@ -232,7 +204,7 @@ employeeController.getSingleEmployee = catchAsync(async (req, res, next) => {
 employeeController.updateEmployee = catchAsync(async (req, res, next) => {
   // Get data from request
   const updatedEmployeeId = req.params.employeeId;
-  const { userName, email } = req.body;
+  const { userName, email, role } = req.body;
 
   // Business Logic Validation
 
@@ -243,37 +215,41 @@ employeeController.updateEmployee = catchAsync(async (req, res, next) => {
   if (!updatedEmployee)
     throw new AppError(400, "Employee not found", "Update Employee Error");
 
-  if (userName) {
-    const userSameName = await User.findOne({ userName });
-    if (userSameName && userSameName._id !== updatedEmployeeId)
-      throw new AppError(
-        400,
-        "User Name has been already taken",
-        "Update Employee Error"
-      );
-  }
-  if (email) {
-    const userSameEmail = await User.findOne({ email });
-    if (userSameEmail && userSameEmail._id !== updatedEmployeeId)
-      throw new AppError(
-        400,
-        "User Email has been already existed",
-        "Update Employee Error"
-      );
-  }
+  const userSameName = await User.findOne({
+    userName,
+    _id: { $ne: updatedEmployeeId },
+  });
 
-  // Process
+  if (userSameName)
+    throw new AppError(
+      400,
+      "User Name has been already taken",
+      "Update Employee Error"
+    );
+
+  const userSameEmail = await User.findOne({
+    email,
+    _id: { $ne: updatedEmployeeId },
+  });
+  if (userSameEmail)
+    throw new AppError(
+      400,
+      "User Email has been already existed",
+      "Update Employee Error"
+    );
+
+  const roleInfo = await Role.findOne({ name: role });
+  updatedEmployee[role] = roleInfo._id;
+
   const allows = [
     "userName",
     "fullName",
     "email",
-    "role",
     "reportTo",
     "gender",
     "phone",
-    "birthday",
     "address",
-    "avatarUrl",
+    "birthday",
   ];
   allows.forEach((field) => {
     if (req.body[field] !== undefined) {
@@ -317,6 +293,34 @@ employeeController.terminateEmployee = catchAsync(async (req, res, next) => {
     terminatedEmployee,
     null,
     "Terminate Employee Successfully"
+  );
+});
+
+employeeController.reactivateEmployee = catchAsync(async (req, res, next) => {
+  // Get data from request
+  const reactivatedEmployeeId = req.params.employeeId;
+
+  // Business Logic Validation
+
+  let reactivatedEmployee = await User.findOne({
+    _id: reactivatedEmployeeId,
+    isDeleted: false,
+  });
+  if (!reactivatedEmployee)
+    throw new AppError(400, "Employee not found", "Reactivate Employee Error");
+
+  // Process
+  reactivatedEmployee.status = "active";
+  await reactivatedEmployee.save();
+
+  // Response
+  return sendResponse(
+    res,
+    200,
+    true,
+    reactivatedEmployee,
+    null,
+    "Reactivate Employee Successfully"
   );
 });
 

@@ -61,6 +61,7 @@ leaveController.getCurrentUserLeaves = catchAsync(async (req, res, next) => {
 
   const leavesList = await LeaveRequest.find(filterCriteria)
     .populate("category")
+    .populate("requestedUser")
     .sort({ fromDate: -1 })
     .skip(offset)
     .limit(limit);
@@ -76,30 +77,29 @@ leaveController.getCurrentUserLeaves = catchAsync(async (req, res, next) => {
   );
 });
 
-leaveController.getEmployeeLeaveAdmin = catchAsync(async (req, res, next) => {
-  // Process
-  const leavesList = await LeaveRequest.find({ isDeleted: false });
-
-  // Response
-  return sendResponse(
-    res,
-    200,
-    true,
-    leavesList,
-    null,
-    "Get Employees Leaves Admin Successfully"
-  );
-});
-
-leaveController.getEmployeeLeaveManager = catchAsync(async (req, res, next) => {
+leaveController.getEmployeeLeave = catchAsync(async (req, res, next) => {
   // Get data from request
   const currentUserId = req.userId;
 
+  // Business Logic Validation
+  const currentUser = await User.findById(currentUserId).populate("role");
+
   // Process
-  const leavesList = await LeaveRequest.find({
-    assignedUser: currentUserId,
-    isDeleted: false,
-  });
+
+  const filterConditions = [{ isDeleted: false, status: { $ne: "rejected" } }];
+
+  if (currentUser.role.name === MANAGER) {
+    filterConditions.push({ assignedUser: currentUserId });
+  }
+
+  const filterCriteria = filterConditions.length
+    ? { $and: filterConditions }
+    : {};
+
+  const leavesList = await LeaveRequest.find(filterCriteria)
+    .populate("requestedUser")
+    .populate("assignedUser")
+    .populate("category");
 
   // Response
   return sendResponse(
@@ -108,7 +108,7 @@ leaveController.getEmployeeLeaveManager = catchAsync(async (req, res, next) => {
     true,
     leavesList,
     null,
-    "Get Employees Leaves Manager Successfully"
+    "Get Employees Leaves Successfully"
   );
 });
 
@@ -121,7 +121,10 @@ leaveController.getPendingLeave = catchAsync(async (req, res, next) => {
     assignedUser: currentUserId,
     status: "pending",
     isDeleted: false,
-  });
+  })
+    .populate("assignedUser")
+    .populate("requestedUser")
+    .populate("category");
 
   // Response
   return sendResponse(
@@ -142,18 +145,6 @@ leaveController.getSingleLeave = catchAsync(async (req, res, next) => {
   // Business Logic Validation - Process
   const currentUser = await User.findById(currentUserId).populate("role");
 
-  if (
-    currentUser.role.name === EMPLOYEE &&
-    selectedRequestId.requestedUser.toString() !== currentUserId
-  )
-    throw new AppError(403, "Access denied", "Get Single Leave Error");
-
-  if (
-    currentUser.role.name === MANAGER &&
-    selectedRequestId.assignedUser.toString() !== currentUserId
-  )
-    throw new AppError(403, "Access denied", "Get Single Leave Error");
-
   const selectedRequest = await LeaveRequest.findOne({
     _id: selectedRequestId,
     isDeleted: false,
@@ -164,6 +155,19 @@ leaveController.getSingleLeave = catchAsync(async (req, res, next) => {
       "Leave request not found",
       "Get Single Leave Error"
     );
+
+  if (
+    currentUser.role.name === EMPLOYEE &&
+    selectedRequest.requestedUser.toString() !== currentUserId
+  )
+    throw new AppError(403, "Access denied", "Get Single Leave Error");
+
+  if (
+    currentUser.role.name === MANAGER &&
+    selectedRequest.requestedUser.toString() !== currentUserId &&
+    selectedRequest.assignedUser.toString() !== currentUserId
+  )
+    throw new AppError(403, "Access denied", "Get Single Leave Error");
 
   // Response
   return sendResponse(
@@ -204,7 +208,7 @@ leaveController.getCurrentUserLeaveBalance = catchAsync(
 leaveController.createLeave = catchAsync(async (req, res, next) => {
   // Get data from request
   const currentUserId = req.userId;
-  let { categoryName, fromDate, fromType, toDate, toType, reason } = req.body;
+  let { categoryName, fromDate, toDate, type, reason } = req.body;
 
   // Business Logic Validation
   let requestor = await User.findById(currentUserId);
@@ -218,7 +222,7 @@ leaveController.createLeave = catchAsync(async (req, res, next) => {
   if (!category)
     throw new AppError(400, "Category not found", "Create Leave Request Error");
 
-  // Logic for date
+  // // Logic for date
   const formattedFromDate = new Date(fromDate);
   const fromDateWithoutTime = new Date(
     formattedFromDate.getFullYear(),
@@ -233,7 +237,7 @@ leaveController.createLeave = catchAsync(async (req, res, next) => {
   );
 
   // Check logic fromDate and toDate
-  if (fromDateWithoutTime > toDateWithoutTime)
+  if (formattedFromDate > formattedToDate)
     throw new AppError(
       400,
       "FromDate cannot be later than toDate",
@@ -242,8 +246,13 @@ leaveController.createLeave = catchAsync(async (req, res, next) => {
 
   // Calculate total leave days
   let totalDaysLeave = 0;
-  if (fromDateWithoutTime === toDateWithoutTime) {
-    if (fromType === "full") {
+
+  if (
+    formattedFromDate.getFullYear() === formattedToDate.getFullYear() &&
+    formattedFromDate.getMonth() === formattedToDate.getMonth() &&
+    formattedFromDate.getDate() === formattedToDate.getDate()
+  ) {
+    if (type === "full") {
       totalDaysLeave = 1;
     } else {
       totalDaysLeave = 0.5;
@@ -251,10 +260,8 @@ leaveController.createLeave = catchAsync(async (req, res, next) => {
   } else {
     totalDaysLeave =
       (toDateWithoutTime - fromDateWithoutTime) / (1000 * 60 * 60 * 24) + 1;
-    if (fromType !== "full") {
-      totalDaysLeave -= 0.5;
-    }
-    if (toType !== "full") {
+
+    if (type !== "full") {
       totalDaysLeave -= 0.5;
     }
   }
@@ -276,7 +283,7 @@ leaveController.createLeave = catchAsync(async (req, res, next) => {
   const yesterday = new Date(today);
   yesterday.setDate(today.getDate() - 1);
 
-  if (fromDateWithoutTime < yesterday)
+  if (formattedFromDate < yesterday)
     throw new AppError(
       400,
       "Leave cannot be applied for previous time",
@@ -287,17 +294,20 @@ leaveController.createLeave = catchAsync(async (req, res, next) => {
     requestedUser: currentUserId,
     isDeleted: false,
     $or: [
+      // Check if document's date range overlaps with or includes request date range .
       {
-        fromDate: { $lte: toDateWithoutTime },
-        toDate: { $gte: fromDateWithoutTime },
+        fromDate: { $lte: formattedToDate },
+        toDate: { $gte: formattedFromDate },
       },
+      //checks if the document's date range includes or ends on requestToDate.
       {
-        fromDate: { $lte: toDateWithoutTime },
-        toDate: { $gte: toDateWithoutTime },
+        fromDate: { $lte: formattedToDate },
+        toDate: { $gte: formattedToDate },
       },
+      //checks if the document's date range includes or begins on requestFromDate.
       {
-        fromDate: { $lte: fromDateWithoutTime },
-        toDate: { $gte: fromDateWithoutTime },
+        fromDate: { $lte: formattedFromDate },
+        toDate: { $gte: formattedFromDate },
       },
     ],
   });
@@ -313,13 +323,13 @@ leaveController.createLeave = catchAsync(async (req, res, next) => {
     requestedUser: currentUserId,
     assignedUser: requestor.reportTo,
     category: category._id,
-    fromDate: fromDateWithoutTime,
-    fromType,
-    toDate: toDateWithoutTime,
-    toType,
+    fromDate: formattedFromDate,
+    toDate: formattedToDate,
+    type,
     totalDays: totalDaysLeave,
     reason,
   });
+
   // Update Leave Balance
   leaveBalance.totalUsed += totalDaysLeave;
   await leaveBalance.save();
@@ -339,7 +349,7 @@ leaveController.updateLeave = catchAsync(async (req, res, next) => {
   // Get data from request
   const currentUserId = req.userId;
   const requestId = req.params.requestId;
-  let { categoryName, fromDate, fromType, toDate, toType, reason } = req.body;
+  let { categoryName, fromDate, toDate, type, reason } = req.body;
 
   // Business Logic Validation
   let requestor = await User.findById(currentUserId).populate("role");
@@ -397,7 +407,7 @@ leaveController.updateLeave = catchAsync(async (req, res, next) => {
   );
 
   // Check logic fromDate and toDate
-  if (fromDateWithoutTime > toDateWithoutTime)
+  if (formattedFromDate > formattedToDate)
     throw new AppError(
       400,
       "FromDate cannot be later than toDate",
@@ -407,8 +417,12 @@ leaveController.updateLeave = catchAsync(async (req, res, next) => {
   // Calculate total leave days
   let totalDaysLeave = 0;
 
-  if (fromDateWithoutTime.getTime() === toDateWithoutTime.getTime()) {
-    if (fromType === "full") {
+  if (
+    formattedFromDate.getFullYear() === formattedToDate.getFullYear() &&
+    formattedFromDate.getMonth() === formattedToDate.getMonth() &&
+    formattedFromDate.getDate() === formattedToDate.getDate()
+  ) {
+    if (type === "full") {
       totalDaysLeave = 1;
     } else {
       totalDaysLeave = 0.5;
@@ -416,10 +430,7 @@ leaveController.updateLeave = catchAsync(async (req, res, next) => {
   } else {
     totalDaysLeave =
       (toDateWithoutTime - fromDateWithoutTime) / (1000 * 60 * 60 * 24) + 1;
-    if (fromType !== "full") {
-      totalDaysLeave -= 0.5;
-    }
-    if (toType !== "full") {
+    if (type !== "full") {
       totalDaysLeave -= 0.5;
     }
   }
@@ -429,7 +440,7 @@ leaveController.updateLeave = catchAsync(async (req, res, next) => {
   const yesterday = new Date(today);
   yesterday.setDate(today.getDate() - 1);
 
-  if (fromDateWithoutTime < yesterday)
+  if (formattedFromDate < yesterday)
     throw new AppError(
       400,
       "Leave cannot be applied for previous time",
@@ -439,19 +450,23 @@ leaveController.updateLeave = catchAsync(async (req, res, next) => {
   // Check apply overlap
   const overlapRequest = await LeaveRequest.find({
     requestedUser: currentUserId,
+    isDeleted: false,
     _id: { $ne: selectedRequest._id },
     $or: [
+      // Check if document's date range overlaps with or includes request date range .
       {
-        fromDate: { $lte: toDateWithoutTime },
-        toDate: { $gte: fromDateWithoutTime },
+        fromDate: { $lte: formattedToDate },
+        toDate: { $gte: formattedFromDate },
       },
+      //checks if the document's date range includes or ends on requestToDate.
       {
-        fromDate: { $lte: toDateWithoutTime },
-        toDate: { $gte: toDateWithoutTime },
+        fromDate: { $lte: formattedToDate },
+        toDate: { $gte: formattedToDate },
       },
+      //checks if the document's date range includes or begins on requestFromDate.
       {
-        fromDate: { $lte: fromDateWithoutTime },
-        toDate: { $gte: fromDateWithoutTime },
+        fromDate: { $lte: formattedFromDate },
+        toDate: { $gte: formattedFromDate },
       },
     ],
   });
@@ -511,10 +526,9 @@ leaveController.updateLeave = catchAsync(async (req, res, next) => {
   // Update request
 
   selectedRequest.category = category._id;
-  selectedRequest.fromDate = fromDateWithoutTime;
-  selectedRequest.fromType = fromType;
-  selectedRequest.toDate = toDateWithoutTime;
-  selectedRequest.toType = toType;
+  selectedRequest.fromDate = formattedFromDate;
+  selectedRequest.toDate = formattedToDate;
+  selectedRequest.type = type;
   selectedRequest.totalDays = totalDaysLeave;
   selectedRequest.reason = reason;
 
@@ -651,7 +665,6 @@ leaveController.rejectLeave = catchAsync(async (req, res, next) => {
 
   // Business Logic Validation
   let rejectedUser = await User.findById(currentUserId).populate("role");
-
   let selectedRequest = await LeaveRequest.findById(requestId);
   if (!selectedRequest)
     throw new AppError(
@@ -677,10 +690,6 @@ leaveController.rejectLeave = catchAsync(async (req, res, next) => {
     }
   }
 
-  // Reject
-  selectedRequest.status = "rejected";
-  await selectedRequest.save();
-
   let requestor = await User.findById(selectedRequest.requestedUser);
   // Update Leave Balance
   let leaveBalance = await LeaveBalance.findOne({
@@ -689,12 +698,11 @@ leaveController.rejectLeave = catchAsync(async (req, res, next) => {
   });
 
   leaveBalance.totalUsed -= selectedRequest.totalDays;
-  leaveBalance.totalRemaining += selectedRequest.totalDays;
   await leaveBalance.save();
 
-  // Update User
-  requestor.leaveCount -= selectedRequest.totalDays;
-  await requestor.save();
+  // Reject
+  selectedRequest.status = "rejected";
+  await selectedRequest.save();
 
   // Response
   return sendResponse(
