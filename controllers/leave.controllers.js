@@ -15,9 +15,6 @@ leaveController.getCurrentUserLeaves = catchAsync(async (req, res, next) => {
 
   let { page, limit, ...filter } = req.query;
 
-  page = parseInt(page) || 1;
-  limit = parseInt(limit) || 5;
-
   // Business Logic Validation
   Object.keys(filter).forEach((key) => {
     if (!allowedFilter.includes(key)) {
@@ -55,23 +52,36 @@ leaveController.getCurrentUserLeaves = catchAsync(async (req, res, next) => {
     ? { $and: filterConditions }
     : {};
 
+  let currentPageLeavesList = [];
+  let totalPages = 0;
   const count = await LeaveRequest.countDocuments(filterCriteria);
-  const totalPages = Math.ceil(count / limit);
-  const offset = limit * (page - 1);
 
-  const leavesList = await LeaveRequest.find(filterCriteria)
+  if (page && limit) {
+    page = parseInt(page) || 1;
+    limit = parseInt(limit) || 5;
+    totalPages = Math.ceil(count / limit);
+    const offset = limit * (page - 1);
+    currentPageLeavesList = await LeaveRequest.find(filterCriteria)
+      .populate("category")
+      .populate("requestedUser")
+      .sort({ fromDate: -1 })
+      .skip(offset)
+      .limit(limit);
+  }
+  const fullLeavesList = await LeaveRequest.find({
+    ...filterCriteria,
+    status: { $ne: "rejected" },
+  })
     .populate("category")
     .populate("requestedUser")
-    .sort({ fromDate: -1 })
-    .skip(offset)
-    .limit(limit);
+    .sort({ fromDate: -1 });
 
   // Response
   return sendResponse(
     res,
     200,
     true,
-    { leavesList, totalPages, count },
+    { fullLeavesList, currentPageLeavesList, totalPages, count },
     null,
     "Get Current User Leaves Successfully"
   );
@@ -193,12 +203,23 @@ leaveController.getCurrentUserLeaveBalance = catchAsync(
       (a, b) => a.leaveCategory.displayOrder - b.leaveCategory.displayOrder
     );
 
+    const totalUsedSum = leaveBalance.reduce(
+      (sum, item) => sum + item.totalUsed,
+      0
+    );
+
+    const totalHadSum = leaveBalance.reduce(
+      (sum, item) => sum + item.leaveCategory.totalDays,
+      0
+    );
+
+    const totalRemainingSum = totalHadSum - totalUsedSum;
     // Response
     return sendResponse(
       res,
       200,
       true,
-      leaveBalance,
+      { leaveBalance, totalUsedSum, totalHadSum, totalRemainingSum },
       null,
       "Get Current User Leave Balance Successfully"
     );
