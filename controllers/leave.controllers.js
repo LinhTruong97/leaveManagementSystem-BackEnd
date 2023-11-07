@@ -136,12 +136,18 @@ leaveController.getPendingLeave = catchAsync(async (req, res, next) => {
     .populate("requestedUser")
     .populate("category");
 
+  const totalPendingCount = await LeaveRequest.countDocuments({
+    assignedUser: currentUserId,
+    status: "pending",
+    isDeleted: false,
+  });
+
   // Response
   return sendResponse(
     res,
     200,
     true,
-    pendingLeave,
+    { pendingLeave, totalPendingCount },
     null,
     "Get Pending Leave Successfully"
   );
@@ -735,4 +741,109 @@ leaveController.rejectLeave = catchAsync(async (req, res, next) => {
     "Reject Leave Request Successfully"
   );
 });
+
+leaveController.getLeaveByMonth = catchAsync(async (req, res, next) => {
+  // Get data from request
+  const currentUserId = req.userId;
+  const { year } = req.params;
+
+  let totalApprovedLeave = 0;
+  const startPeriod = new Date(`${year}-01-01`);
+  const endPeriod = new Date(`${year}-12-31`);
+
+  // Business Logic Validation
+  const currentUser = await User.findById(currentUserId).populate("role");
+
+  const filterConditions = [
+    {
+      status: "approved",
+      $and: [
+        { fromDate: { $gte: startPeriod } },
+        { fromDate: { $lte: endPeriod } },
+      ],
+    },
+  ];
+
+  if (currentUser.role.name === MANAGER) {
+    filterConditions.push({ assignedUser: currentUserId });
+  }
+
+  const filterCriteria = filterConditions.length
+    ? { $and: filterConditions }
+    : {};
+
+  const leaveRequests = await LeaveRequest.find(filterCriteria);
+
+  if (leaveRequests.length === 0)
+    throw new AppError(
+      400,
+      "Leave Request not found",
+      "Get Leave By Month Error"
+    );
+  const monthLabels = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+  const totalLeaveByMonth = Array.from({ length: 12 }, (_, month) => ({
+    label: monthLabels[month],
+    data: 0,
+  }));
+
+  for (let month = 1; month <= 12; month++) {
+    let daysTakenNextMonth = 0;
+    const totalLeaveTakenInMonth = leaveRequests.reduce(
+      (total, leaveRequest) => {
+        let fromDate = new Date(leaveRequest.fromDate);
+        fromDate = new Date(fromDate.toUTCString());
+        let toDate = new Date(leaveRequest.toDate);
+        toDate = new Date(toDate.toUTCString());
+
+        if (fromDate.getMonth() === month - 1) {
+          if (fromDate.getMonth() === toDate.getMonth()) {
+            total += leaveRequest.totalDays;
+          } else {
+            const isFullDay = leaveRequest.type === "full";
+            const daysTaken =
+              new Date(year, month, 0).getDate() - fromDate.getDate() + 1;
+            total += isFullDay ? daysTaken : daysTaken * 0.5;
+            daysTakenNextMonth +=
+              toDate.getDate() - new Date(year, month, 1).getDate() + 1;
+          }
+        }
+        return total;
+      },
+      0
+    );
+
+    totalLeaveByMonth[month - 1].label = monthLabels[month - 1];
+    totalLeaveByMonth[month - 1].data += totalLeaveTakenInMonth;
+
+    const nextMonthIndex = month % 12;
+    if (month !== 12) {
+      totalLeaveByMonth[nextMonthIndex].data += daysTakenNextMonth;
+    }
+    totalApprovedLeave += totalLeaveTakenInMonth + daysTakenNextMonth;
+  }
+
+  // Response
+  return sendResponse(
+    res,
+    200,
+    true,
+    { totalLeaveByMonth, totalApprovedLeave },
+    null,
+    "Get Leave By Month Successfully"
+  );
+});
+
 module.exports = leaveController;

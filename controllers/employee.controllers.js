@@ -73,9 +73,6 @@ employeeController.getEmployees = catchAsync(async (req, res, next) => {
 
   let { page, limit, ...filter } = req.query;
 
-  page = parseInt(page) || 1;
-  limit = parseInt(limit) || 10;
-
   // Business Logic Validation
   Object.keys(filter).forEach((key) => {
     if (!allowedFilter.includes(key)) {
@@ -117,12 +114,19 @@ employeeController.getEmployees = catchAsync(async (req, res, next) => {
     : {};
 
   const count = await User.countDocuments(filterCriteria);
-  const totalPages = Math.ceil(count / limit);
-  const offset = limit * (page - 1);
-  let employeeList = await User.find(filterCriteria)
-    .populate("role")
-    .skip(offset)
-    .limit(limit);
+  let employeeList = [];
+  let totalPages = 0;
+  if (page && limit) {
+    page = parseInt(page) || 1;
+    limit = parseInt(limit) || 10;
+
+    totalPages = Math.ceil(count / limit);
+    const offset = limit * (page - 1);
+    employeeList = await User.find(filterCriteria)
+      .populate("role")
+      .skip(offset)
+      .limit(limit);
+  }
 
   // Response
   return sendResponse(

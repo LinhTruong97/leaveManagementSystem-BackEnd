@@ -191,4 +191,17 @@ router.put(
   leaveController.rejectLeave
 );
 
+/**
+ * @route GET /leaves/leave-by-month/:year
+ * @description Get total leave taken by month
+ * @limit only when status is approved
+ * @access Login required, limit access by role (manager, admin office)
+ */
+router.get(
+  "/leave-by-month/:year",
+  authentication.loginRequired,
+  validators.validate([param("year").exists().isNumeric()]),
+  leaveController.getLeaveByMonth
+);
+
 module.exports = router;
