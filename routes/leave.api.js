@@ -170,6 +170,7 @@ router.delete(
 router.put(
   "/approve/:requestId",
   authentication.loginRequired,
+  authorization.specificRoleRequired([ADMIN_OFFICE, MANAGER]),
   validators.validate([
     param("requestId").exists().isString().custom(validators.checkObjectId),
   ]),
@@ -185,6 +186,7 @@ router.put(
 router.put(
   "/reject/:requestId",
   authentication.loginRequired,
+  authorization.specificRoleRequired([ADMIN_OFFICE, MANAGER]),
   validators.validate([
     param("requestId").exists().isString().custom(validators.checkObjectId),
   ]),
@@ -200,6 +202,7 @@ router.put(
 router.get(
   "/leave-by-month/:year",
   authentication.loginRequired,
+  authorization.specificRoleRequired([ADMIN_OFFICE, MANAGER]),
   validators.validate([param("year").exists().isNumeric()]),
   leaveController.getLeaveByMonth
 );
