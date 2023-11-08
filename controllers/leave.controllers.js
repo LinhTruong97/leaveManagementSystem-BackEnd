@@ -774,12 +774,6 @@ leaveController.getLeaveByMonth = catchAsync(async (req, res, next) => {
 
   const leaveRequests = await LeaveRequest.find(filterCriteria);
 
-  if (leaveRequests.length === 0)
-    throw new AppError(
-      400,
-      "Leave Request not found",
-      "Get Leave By Month Error"
-    );
   const monthLabels = [
     "Jan",
     "Feb",
