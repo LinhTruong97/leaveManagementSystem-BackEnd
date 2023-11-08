@@ -55,6 +55,11 @@ leaveController.getCurrentUserLeaves = catchAsync(async (req, res, next) => {
   let currentPageLeavesList = [];
   let totalPages = 0;
   const count = await LeaveRequest.countDocuments(filterCriteria);
+  const pendingCount = await LeaveRequest.countDocuments({
+    requestedUser: currentUserId,
+    isDeleted: false,
+    status: "pending",
+  });
 
   if (page && limit) {
     page = parseInt(page) || 1;
@@ -81,7 +86,7 @@ leaveController.getCurrentUserLeaves = catchAsync(async (req, res, next) => {
     res,
     200,
     true,
-    { fullLeavesList, currentPageLeavesList, totalPages, count },
+    { fullLeavesList, currentPageLeavesList, totalPages, count, pendingCount },
     null,
     "Get Current User Leaves Successfully"
   );
