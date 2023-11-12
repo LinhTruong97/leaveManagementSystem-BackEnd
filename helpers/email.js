@@ -22,7 +22,6 @@ const sendEmail = async (toEmail, fullName, link) => {
       <p>Dear ${fullName},</p>
       <br/>
       <p>Congratulations on joining our company! We are excited to have you on board.</p>
-      <br/>
       <p>To get started, please visit this <a href=${link}>link</a> to set up your account.</p>
       <p>If you have any questions or encounter any issues during the process, please don't hesitate to contact me.</p>
       <br/>
