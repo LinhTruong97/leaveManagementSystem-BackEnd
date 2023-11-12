@@ -33,10 +33,7 @@ router.post(
       .isIn([ADMIN_OFFICE, MANAGER, EMPLOYEE])
       .withMessage("Role value is invalid"),
     body("reportTo").exists().isString().custom(validators.checkObjectId),
-    body("birthday")
-      .optional()
-      .isISO8601()
-      .withMessage("Birthday wrong format"),
+    body("birthday").isISO8601().withMessage("Birthday wrong format"),
   ]),
   employeeController.createNewEmployee
 );

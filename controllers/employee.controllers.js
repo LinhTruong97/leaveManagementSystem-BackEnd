@@ -1,3 +1,4 @@
+const { sendEmail } = require("../helpers/email");
 const { AppError, catchAsync, sendResponse } = require("../helpers/utils");
 const LeaveBalance = require("../models/LeaveBalance");
 const LeaveCategory = require("../models/LeaveCategory");
@@ -53,6 +54,10 @@ employeeController.createNewEmployee = catchAsync(async (req, res, next) => {
 
     await newLeaveBalance.save();
   });
+
+  const setUpAccountLink = `https://leave-management-system-hoailinhhhhh.netlify.app/auth/login`;
+
+  await sendEmail(email, fullName, setUpAccountLink);
 
   // Response
   sendResponse(
