@@ -30,7 +30,7 @@ authController.login = catchAsync(async (req, res, next) => {
 
 authController.accountSetup = catchAsync(async (req, res, next) => {
   // Get data from request
-  // const userId = req.params.userId;
+  const currentUserId = req.setupUserId;
   let { userName, email, password } = req.body;
 
   // Business Logic Validation
@@ -61,6 +61,13 @@ authController.accountSetup = catchAsync(async (req, res, next) => {
   // await user.save();
 
   // Response
-  sendResponse(res, 200, true, "ok", null, "Setup Account Successfully");
+  sendResponse(
+    res,
+    200,
+    true,
+    { currentUserId, userName, email, password },
+    null,
+    "Setup Account Successfully"
+  );
 });
 module.exports = authController;

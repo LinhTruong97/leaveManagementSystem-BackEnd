@@ -44,7 +44,7 @@ authentication.setupTokenRequired = (req, res, next) => {
           throw new AppError(401, "Token is invalid", "Authentication Error");
         }
       }
-      console.log(payload);
+      req.setupUserId = payload._id;
     });
     next();
   } catch (error) {
