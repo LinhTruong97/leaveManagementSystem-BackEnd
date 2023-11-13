@@ -55,7 +55,7 @@ employeeController.createNewEmployee = catchAsync(async (req, res, next) => {
     await newLeaveBalance.save();
   });
 
-  const setupToken = await user.generateSetupToken();
+  const setupToken = await employee.generateSetupToken();
 
   const setupAccountLink = `${process.env.REACT_APP_FRONTEND_API}/auth/setup/${setupToken}`;
 
