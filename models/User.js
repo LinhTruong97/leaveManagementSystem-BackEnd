@@ -56,7 +56,7 @@ userSchema.methods.generateSetupToken = async function () {
   const setupToken = await jwt.sign({ _id: this._id }, JWT_SECRET_KEY, {
     expiresIn: "1d",
   });
-  return accessToken;
+  return setupToken;
 };
 
 const User = mongoose.model("User", userSchema);
