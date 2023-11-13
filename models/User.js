@@ -45,8 +45,15 @@ userSchema.methods.toJSON = function () {
   return user;
 };
 
-userSchema.methods.generateToken = async function () {
+userSchema.methods.generateAccessToken = async function () {
   const accessToken = await jwt.sign({ _id: this._id }, JWT_SECRET_KEY, {
+    expiresIn: "1d",
+  });
+  return accessToken;
+};
+
+userSchema.methods.generateSetupToken = async function () {
+  const setupToken = await jwt.sign({ _id: this._id }, JWT_SECRET_KEY, {
     expiresIn: "1d",
   });
   return accessToken;

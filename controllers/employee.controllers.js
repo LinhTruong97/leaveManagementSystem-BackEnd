@@ -55,9 +55,11 @@ employeeController.createNewEmployee = catchAsync(async (req, res, next) => {
     await newLeaveBalance.save();
   });
 
-  const setUpAccountLink = `https://leave-management-system-hoailinhhhhh.netlify.app/auth/login`;
+  const setupToken = await user.generateSetupToken();
 
-  await sendEmail(email, fullName, setUpAccountLink);
+  const setupAccountLink = `${process.env.REACT_APP_FRONTEND_API}/auth/setup/${setupToken}`;
+
+  await sendEmail(email, fullName, setupAccountLink);
 
   // Response
   sendResponse(

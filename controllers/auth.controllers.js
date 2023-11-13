@@ -15,7 +15,7 @@ authController.login = catchAsync(async (req, res, next) => {
   // Process
   const isMatch = await bcrypt.compare(password, user.password);
   if (!isMatch) throw new AppError(400, "Wrong password", "Login Error");
-  const accessToken = await user.generateToken();
+  const accessToken = await user.generateAccessToken();
 
   // Response
   sendResponse(

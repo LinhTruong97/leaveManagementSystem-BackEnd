@@ -30,15 +30,14 @@ router.post(
 );
 
 /**
- * @route PUT /auth/accountsetup/:userId
+ * @route PUT /auth/setup/:token
  * @description Set up account
  * @body {userName, email, passsword}
  * @access Public
  */
 router.put(
-  "/accountsetup/:userId",
+  "/setup/:token",
   validators.validate([
-    param("userId").exists().isString().custom(validators.checkObjectId),
     body("userName", "User Name is required").trim().exists().notEmpty(),
     body("email")
       .trim()
