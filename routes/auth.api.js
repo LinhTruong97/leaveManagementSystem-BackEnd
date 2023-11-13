@@ -3,6 +3,7 @@ const authController = require("../controllers/auth.controllers");
 const validators = require("../middlewares/validators");
 const router = express.Router();
 const { body, param } = require("express-validator");
+const authentication = require("../middlewares/authentication");
 
 /**
  * @route POST /auth/login
@@ -37,6 +38,7 @@ router.post(
  */
 router.put(
   "/setup/:token",
+  authentication.setupTokenRequired,
   validators.validate([
     body("userName", "User Name is required").trim().exists().notEmpty(),
     body("email")

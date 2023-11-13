@@ -28,4 +28,27 @@ authentication.loginRequired = (req, res, next) => {
   }
 };
 
+authentication.setupTokenRequired = (req, res, next) => {
+  try {
+    const setupToken = req.params.token;
+
+    if (!setupToken)
+      throw new AppError(401, "Token required", "Authentication Error");
+
+    const token = setupToken.replace("Bearer ", "");
+    jwt.verify(token, JWT_SECRET_KEY, (err, payload) => {
+      if (err) {
+        if (err.name === "TokenExpiredError") {
+          throw new AppError(401, "Token Expired", "Authentication Error");
+        } else {
+          throw new AppError(401, "Token is invalid", "Authentication Error");
+        }
+      }
+      console.log(payload);
+    });
+    next();
+  } catch (error) {
+    next(error);
+  }
+};
 module.exports = authentication;
