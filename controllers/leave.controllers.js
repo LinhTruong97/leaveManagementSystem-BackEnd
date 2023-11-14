@@ -2,8 +2,14 @@ const { AppError, catchAsync, sendResponse } = require("../helpers/utils");
 const LeaveBalance = require("../models/LeaveBalance");
 const LeaveCategory = require("../models/LeaveCategory");
 const LeaveRequest = require("../models/LeaveRequest");
+const Notification = require("../models/Notification");
 const User = require("../models/User");
-const { ADMIN_OFFICE, EMPLOYEE, MANAGER } = require("../variables/constants");
+const {
+  ADMIN_OFFICE,
+  EMPLOYEE,
+  MANAGER,
+  NOTIFICATION_SUBMIT_LEAVE,
+} = require("../variables/constants");
 
 const leaveController = {};
 
@@ -364,6 +370,14 @@ leaveController.createLeave = catchAsync(async (req, res, next) => {
   // Update Leave Balance
   leaveBalance.totalUsed += totalDaysLeave;
   await leaveBalance.save();
+
+  // Create notification
+  const notiMessage = NOTIFICATION_SUBMIT_LEAVE(requestor.userName);
+
+  await Notification.create({
+    targetUser: requestor.reportTo,
+    message: notiMessage,
+  });
 
   // Response
   return sendResponse(
