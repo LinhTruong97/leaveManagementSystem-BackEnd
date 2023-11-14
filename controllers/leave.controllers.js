@@ -286,24 +286,14 @@ leaveController.createLeave = catchAsync(async (req, res, next) => {
   let totalDaysLeave = 0;
   console.log(formattedFromDate);
   console.log(formattedToDate);
-  if (
-    formattedFromDate.getFullYear() === formattedToDate.getFullYear() &&
-    formattedFromDate.getMonth() === formattedToDate.getMonth() &&
-    formattedFromDate.getDate() === formattedToDate.getDate()
-  ) {
-    if (type === "full") {
-      totalDaysLeave = 1;
-    } else {
-      totalDaysLeave = 0.5;
-    }
-  } else {
+
+  if (type === "full") {
     totalDaysLeave =
       (toDateWithoutTime - fromDateWithoutTime) / (1000 * 60 * 60 * 24) + 1;
-
-    if (type !== "full") {
-      totalDaysLeave -= 0.5;
-    }
+  } else {
+    totalDaysLeave = 0.5;
   }
+
   // Check leave balance
   let leaveBalance = await LeaveBalance.findOne({
     user: currentUserId,
