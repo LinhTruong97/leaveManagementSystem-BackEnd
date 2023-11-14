@@ -7,6 +7,6 @@ const router = express.Router();
  * @description Get all notifications
  * @access Login required
  */
-router.get("/notifications", notificationController.getNotifications);
+router.get("/", notificationController.getNotifications);
 
 module.exports = router;
