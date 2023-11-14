@@ -48,12 +48,13 @@ employeeController.createNewEmployee = catchAsync(async (req, res, next) => {
   const remainingDaysInYear = Math.ceil(
     (expiredDate - currentDate) / (1000 * 60 * 60 * 24)
   );
+  console.log(leaveCategoryList);
 
   leaveCategoryList.forEach(async (category) => {
     const proratedAvailableDays = Math.ceil(
       (category.totalDays / 365) * remainingDaysInYear
     );
-
+    console.log(proratedAvailableDays);
     const newLeaveBalance = await LeaveBalance.create({
       user: employee._id,
       leaveCategory: category._id,
