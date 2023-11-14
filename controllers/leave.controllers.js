@@ -302,8 +302,7 @@ leaveController.createLeave = catchAsync(async (req, res, next) => {
     user: currentUserId,
     leaveCategory: category._id,
   }).populate("leaveCategory");
-  const toralRemaining =
-    leaveBalance.leaveCategory.totalDays - leaveBalance.totalUsed;
+  const toralRemaining = leaveBalance.totalAvailable - leaveBalance.totalUsed;
   if (toralRemaining < totalDaysLeave)
     throw new AppError(
       400,
@@ -516,7 +515,7 @@ leaveController.updateLeave = catchAsync(async (req, res, next) => {
       leaveCategory: selectedRequest.category,
     }).populate("leaveCategory");
     const toralRemainingUpdated =
-      leaveBalance.leaveCategory.totalDays -
+      leaveBalance.totalAvailable -
       leaveBalance.totalUsed +
       selectedRequest.totalDays;
     if (toralRemainingUpdated < totalDaysLeave)
@@ -540,7 +539,7 @@ leaveController.updateLeave = catchAsync(async (req, res, next) => {
       leaveCategory: category._id,
     }).populate("leaveCategory");
     const toralRemainingNew =
-      leaveBalanceNew.leaveCategory.totalDays - leaveBalanceNew.totalUsed;
+      leaveBalanceNew.totalAvailable - leaveBalanceNew.totalUsed;
     if (toralRemainingNew < totalDaysLeave)
       throw new AppError(
         400,
