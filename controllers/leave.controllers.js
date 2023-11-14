@@ -262,17 +262,7 @@ leaveController.createLeave = catchAsync(async (req, res, next) => {
 
   // // Logic for date
   const formattedFromDate = new Date(fromDate);
-  const fromDateWithoutTime = new Date(
-    formattedFromDate.getFullYear(),
-    formattedFromDate.getMonth(),
-    formattedFromDate.getDate()
-  );
   const formattedToDate = new Date(toDate);
-  const toDateWithoutTime = new Date(
-    formattedToDate.getFullYear(),
-    formattedToDate.getMonth(),
-    formattedToDate.getDate()
-  );
 
   // Check logic fromDate and toDate
   if (formattedFromDate > formattedToDate)
@@ -284,10 +274,6 @@ leaveController.createLeave = catchAsync(async (req, res, next) => {
 
   // Calculate total leave days
   let totalDaysLeave = 0;
-  console.log(formattedFromDate);
-  console.log(formattedToDate);
-  console.log(fromDateWithoutTime);
-  console.log(toDateWithoutTime);
 
   if (type === "full") {
     totalDaysLeave = Math.ceil(
@@ -433,17 +419,8 @@ leaveController.updateLeave = catchAsync(async (req, res, next) => {
   // Logic for date
 
   const formattedFromDate = new Date(fromDate);
-  const fromDateWithoutTime = new Date(
-    formattedFromDate.getFullYear(),
-    formattedFromDate.getMonth(),
-    formattedFromDate.getDate()
-  );
+
   const formattedToDate = new Date(toDate);
-  const toDateWithoutTime = new Date(
-    formattedToDate.getFullYear(),
-    formattedToDate.getMonth(),
-    formattedToDate.getDate()
-  );
 
   // Check logic fromDate and toDate
   if (formattedFromDate > formattedToDate)
@@ -456,22 +433,12 @@ leaveController.updateLeave = catchAsync(async (req, res, next) => {
   // Calculate total leave days
   let totalDaysLeave = 0;
 
-  if (
-    formattedFromDate.getFullYear() === formattedToDate.getFullYear() &&
-    formattedFromDate.getMonth() === formattedToDate.getMonth() &&
-    formattedFromDate.getDate() === formattedToDate.getDate()
-  ) {
-    if (type === "full") {
-      totalDaysLeave = 1;
-    } else {
-      totalDaysLeave = 0.5;
-    }
+  if (type === "full") {
+    totalDaysLeave = Math.ceil(
+      (formattedToDate - formattedFromDate) / (1000 * 60 * 60 * 24)
+    );
   } else {
-    totalDaysLeave =
-      (toDateWithoutTime - fromDateWithoutTime) / (1000 * 60 * 60 * 24) + 1;
-    if (type !== "full") {
-      totalDaysLeave -= 0.5;
-    }
+    totalDaysLeave = 0.5;
   }
 
   // Check apply previous date
