@@ -286,10 +286,13 @@ leaveController.createLeave = catchAsync(async (req, res, next) => {
   let totalDaysLeave = 0;
   console.log(formattedFromDate);
   console.log(formattedToDate);
+  console.log(fromDateWithoutTime);
+  console.log(toDateWithoutTime);
 
   if (type === "full") {
-    totalDaysLeave =
-      (formattedToDate - formattedFromDate) / (1000 * 60 * 60 * 24) + 1;
+    totalDaysLeave = Math.ceil(
+      (formattedToDate - formattedFromDate) / (1000 * 60 * 60 * 24)
+    );
   } else {
     totalDaysLeave = 0.5;
   }
