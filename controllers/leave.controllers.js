@@ -284,7 +284,8 @@ leaveController.createLeave = catchAsync(async (req, res, next) => {
 
   // Calculate total leave days
   let totalDaysLeave = 0;
-
+  console.log(formattedFromDate);
+  console.log(formattedToDate);
   if (
     formattedFromDate.getFullYear() === formattedToDate.getFullYear() &&
     formattedFromDate.getMonth() === formattedToDate.getMonth() &&
