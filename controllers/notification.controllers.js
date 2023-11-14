@@ -1,4 +1,5 @@
 const { AppError, catchAsync, sendResponse } = require("../helpers/utils");
+const Notification = require("../models/Notification");
 
 const notificationController = {};
 
