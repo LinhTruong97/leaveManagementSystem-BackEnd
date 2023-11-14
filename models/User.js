@@ -36,7 +36,7 @@ const userSchema = Schema(
     avatarUrl: { type: String, default: "" },
     isDeleted: { type: Boolean, default: false, select: false },
   },
-  { timestamp: true }
+  { timestamps: true }
 );
 
 userSchema.methods.toJSON = function () {

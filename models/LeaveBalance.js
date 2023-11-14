@@ -14,10 +14,10 @@ const leaveBalanceSchema = Schema(
       ref: "LeaveCategory",
     },
     totalUsed: { type: Number },
-    totalRemaining: { type: Number },
+    totalAvailable: { type: Number },
     expiredDate: { type: Date },
   },
-  { timestamp: true }
+  { timestamps: true }
 );
 
 const LeaveBalance = mongoose.model("LeaveBalance", leaveBalanceSchema);

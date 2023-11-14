@@ -15,7 +15,7 @@ const leaveCategorySchema = Schema(
     totalDays: { type: Number },
     displayOrder: { type: Number },
   },
-  { timestamp: true }
+  { timestamps: true }
 );
 
 const LeaveCategory = mongoose.model("LeaveCategory", leaveCategorySchema);

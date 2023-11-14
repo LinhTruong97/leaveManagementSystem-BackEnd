@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
-const notificationSchema = Schema({}, { timestamp: true });
+const notificationSchema = Schema({}, { timestamps: true });
 
 const Notification = mongoose.model("Notification", notificationSchema);
 

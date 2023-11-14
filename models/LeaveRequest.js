@@ -34,7 +34,7 @@ const leaveRequestSchema = Schema(
     },
     isDeleted: { type: Boolean, default: false, select: false },
   },
-  { timestamp: true }
+  { timestamps: true }
 );
 
 const LeaveRequest = mongoose.model("LeaveRequest", leaveRequestSchema);

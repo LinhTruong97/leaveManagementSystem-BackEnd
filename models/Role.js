@@ -14,7 +14,7 @@ const roleSchema = Schema(
       enum: ["1", "2", "3"],
     },
   },
-  { timestamp: true }
+  { timestamps: true }
 );
 
 const Role = mongoose.model("Role", roleSchema);

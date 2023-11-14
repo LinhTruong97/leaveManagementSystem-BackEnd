@@ -5,7 +5,7 @@ const LeaveCategory = require("../models/LeaveCategory");
 const Role = require("../models/Role");
 const User = require("../models/User");
 const { MANAGER, ADMIN_OFFICE } = require("../variables/constants");
-const START_DATE = process.env.START_DATE;
+const END_DATE = process.env.END_DATE;
 
 const employeeController = {};
 
@@ -41,14 +41,24 @@ employeeController.createNewEmployee = catchAsync(async (req, res, next) => {
   });
 
   const currentYear = new Date().getFullYear();
-  const formattedExpiredDate = `${START_DATE}/${currentYear}`;
+  const formattedExpiredDate = `${END_DATE}/${currentYear}`;
   const expiredDate = new Date(formattedExpiredDate);
 
+  const currentDate = new Date();
+  const remainingDaysInYear = Math.ceil(
+    (expiredDate - currentDate) / (1000 * 60 * 60 * 24)
+  );
+
   leaveCategoryList.forEach(async (category) => {
+    const proratedAvailableDays = Math.ceil(
+      (category.totalDays / 365) * remainingDaysInYear
+    );
+
     const newLeaveBalance = await LeaveBalance.create({
       user: employee._id,
       leaveCategory: category._id,
       totalUsed: 0,
+      totalAvailable: proratedAvailableDays,
       expiredDate: expiredDate,
     });
 
