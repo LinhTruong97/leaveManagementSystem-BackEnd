@@ -8,6 +8,16 @@ const notificationSchema = Schema(
       require: true,
       ref: "User",
     },
+    leaveRequest: {
+      type: Schema.Types.ObjectId,
+      require: true,
+      ref: "LeaveRequest",
+    },
+    type: {
+      type: String,
+      enum: ["leave_submit", "leave_approve", "leave_reject"],
+      required: true,
+    },
     message: {
       type: String,
       required: true,

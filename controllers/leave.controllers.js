@@ -9,6 +9,8 @@ const {
   EMPLOYEE,
   MANAGER,
   NOTIFICATION_SUBMIT_LEAVE,
+  NOTIFICATION_APPROVE_LEAVE,
+  NOTIFICATION_REJECT_LEAVE,
 } = require("../variables/constants");
 
 const leaveController = {};
@@ -356,6 +358,8 @@ leaveController.createLeave = catchAsync(async (req, res, next) => {
 
   await Notification.create({
     targetUser: requestor.reportTo,
+    leaveRequest: leaveRequest._id,
+    type: "leave_submit",
     message: notiMessage,
   });
 
@@ -653,6 +657,15 @@ leaveController.approveLeave = catchAsync(async (req, res, next) => {
   selectedRequest.status = "approved";
   await selectedRequest.save();
 
+  const notiMessage = NOTIFICATION_APPROVE_LEAVE;
+
+  await Notification.create({
+    targetUser: selectedRequest.requestedUser,
+    leaveRequest: selectedRequest._id,
+    type: "leave_approve",
+    message: notiMessage,
+  });
+
   // Response
   return sendResponse(
     res,
@@ -709,6 +722,15 @@ leaveController.rejectLeave = catchAsync(async (req, res, next) => {
   // Reject
   selectedRequest.status = "rejected";
   await selectedRequest.save();
+
+  const notiMessage = NOTIFICATION_REJECT_LEAVE;
+
+  await Notification.create({
+    targetUser: selectedRequest.requestedUser,
+    leaveRequest: selectedRequest._id,
+    type: "leave_reject",
+    message: notiMessage,
+  });
 
   // Response
   return sendResponse(
