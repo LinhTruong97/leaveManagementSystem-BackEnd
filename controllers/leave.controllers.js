@@ -220,7 +220,7 @@ leaveController.getCurrentUserLeaveBalance = catchAsync(
     );
 
     const totalHadSum = leaveBalance.reduce(
-      (sum, item) => sum + item.leaveCategory.totalDays,
+      (sum, item) => sum + item.totalAvailable,
       0
     );
 
