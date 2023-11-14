@@ -20,7 +20,10 @@ router.use("/employees", postAPI);
 
 // leaveAPI
 const leaveAPI = require("./leave.api");
-const { sendEmail } = require("../helpers/email");
 router.use("/leaves", leaveAPI);
+
+// notificationAPI
+const notificationAPI = require("./notification.api");
+router.use("/notifications", notificationAPI);
 
 module.exports = router;
