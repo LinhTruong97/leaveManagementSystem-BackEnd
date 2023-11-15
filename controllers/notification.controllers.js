@@ -48,11 +48,14 @@ notificationController.getUnreadNotifications = catchAsync(
     })
       .sort({ createdAt: -1 })
       .limit(10);
+    console.log(notifications);
 
     const unreadCount = await Notification.countDocuments({
       targetUser: currentUserId,
       isRead: false,
-    })
+    });
+    console
+      .log(unreadCount)
       // Response
       .sendResponse(
         res,
