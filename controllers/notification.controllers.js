@@ -1,5 +1,6 @@
 const { AppError, catchAsync, sendResponse } = require("../helpers/utils");
 const Notification = require("../models/Notification");
+const User = require("../models/User");
 
 const notificationController = {};
 
@@ -20,6 +21,20 @@ notificationController.getNotifications = catchAsync(async (req, res, next) => {
     null,
     "Get Notifications Successfully"
   );
+});
+
+notificationController.updateFcmToken = catchAsync(async (req, res, next) => {
+  const { fcmToken } = req.body;
+  const currentUserId = req.userId;
+
+  const user = await User.findById(currentUserId);
+
+  if (!user.fcmTokens.includes(fcmToken)) {
+    user.fcmTokens.push(fcmToken);
+    await user.save();
+  }
+
+  sendResponse(res, 201, true, null, null, "Update Fcm Token Successfully");
 });
 
 module.exports = notificationController;

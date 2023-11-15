@@ -34,6 +34,7 @@ const userSchema = Schema(
     phone: { type: String, default: "" },
     address: { type: String, default: "" },
     avatarUrl: { type: String, default: "" },
+    fcmTokens: [String],
     isDeleted: { type: Boolean, default: false, select: false },
   },
   { timestamps: true }
