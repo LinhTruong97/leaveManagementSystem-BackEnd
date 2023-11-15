@@ -54,17 +54,16 @@ notificationController.getUnreadNotifications = catchAsync(
       targetUser: currentUserId,
       isRead: false,
     });
-    console
-      .log(unreadCount)
-      // Response
-      .sendResponse(
-        res,
-        200,
-        true,
-        { notifications, unreadCount },
-        null,
-        "Get Unread Notifications Successfully"
-      );
+    console.log(unreadCount);
+    // Response
+    sendResponse(
+      res,
+      200,
+      true,
+      { notifications, unreadCount },
+      null,
+      "Get Unread Notifications Successfully"
+    );
   }
 );
 
