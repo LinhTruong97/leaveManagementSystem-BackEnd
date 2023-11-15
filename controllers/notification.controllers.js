@@ -37,4 +37,32 @@ notificationController.updateFcmToken = catchAsync(async (req, res, next) => {
   sendResponse(res, 201, true, null, null, "Update Fcm Token Successfully");
 });
 
+notificationController.getUnreadNotifications = catchAsync(
+  async (req, res, next) => {
+    // Get data from request
+    const currentUserId = req.userId;
+
+    const notifications = await Notification.find({
+      targetUser: currentUserId,
+      isRead: false,
+    })
+      .sort({ createdAt: -1 })
+      .limit(10);
+
+    const unreadCount = await Notification.countDocuments({
+      targetUser: currentUserId,
+      isRead: false,
+    })
+      // Response
+      .sendResponse(
+        res,
+        200,
+        true,
+        { notifications, unreadCount },
+        null,
+        "Get Unread Notifications Successfully"
+      );
+  }
+);
+
 module.exports = notificationController;
