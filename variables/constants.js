@@ -2,9 +2,8 @@ const ADMIN_OFFICE = "admin_office";
 const MANAGER = "manager";
 const EMPLOYEE = "employee";
 
-const NOTIFICATION_SUBMIT_LEAVE = (name) => {
-  return `New leave request from ${name} has been submitted.`;
-};
+const NOTIFICATION_SUBMIT_LEAVE =
+  "New leave request has been submitted to you.";
 
 const NOTIFICATION_APPROVE_LEAVE = "Your leave request has been approved.";
 

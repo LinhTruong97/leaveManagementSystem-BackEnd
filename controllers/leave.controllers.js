@@ -354,7 +354,7 @@ leaveController.createLeave = catchAsync(async (req, res, next) => {
   await leaveBalance.save();
 
   // Create notification
-  const notiMessage = NOTIFICATION_SUBMIT_LEAVE(requestor.userName);
+  const notiMessage = NOTIFICATION_SUBMIT_LEAVE;
 
   await Notification.create({
     targetUser: requestor.reportTo,
