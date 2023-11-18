@@ -21,6 +21,7 @@ authentication.loginRequired = (req, res, next) => {
         }
       }
       req.userId = payload._id;
+      req.currentFcmToken = payload.currentFcmToken;
     });
     next();
   } catch (error) {

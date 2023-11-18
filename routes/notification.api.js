@@ -16,31 +16,6 @@ router.get(
   notificationController.getNotifications
 );
 
-/**
- * @route GET /notifications/unread
- * @description Get all unread notifications
- * @access Login required
- */
-router.get(
-  "/unread",
-  authentication.loginRequired,
-  notificationController.getUnreadNotifications
-);
-
-/**
- * @route PUT /notifications/fcm-token
- * @description Update fcm token in user db
- * @access Login required
- */
-router.put(
-  "/fcm-token",
-  authentication.loginRequired,
-  validators.validate([
-    body("fcmToken").exists().notEmpty().withMessage("Fcm token is required"),
-  ]),
-  notificationController.updateFcmToken
-);
-
 // Test send noti
 router.post(
   "/send",
