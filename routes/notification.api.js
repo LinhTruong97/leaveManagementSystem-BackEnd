@@ -41,4 +41,11 @@ router.put(
   notificationController.updateFcmToken
 );
 
+// Test send noti
+router.post(
+  "/send",
+  authentication.loginRequired,
+  notificationController.sendNotification
+);
+
 module.exports = router;
