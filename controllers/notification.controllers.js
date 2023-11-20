@@ -91,7 +91,7 @@ notificationController.markRead = catchAsync(async (req, res, next) => {
     res,
     201,
     true,
-    null,
+    notification,
     null,
     "Mark Read Notification Successfully"
   );
