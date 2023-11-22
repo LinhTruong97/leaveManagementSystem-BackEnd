@@ -16,13 +16,12 @@ authController.login = catchAsync(async (req, res, next) => {
   const isMatch = await bcrypt.compare(password, user.password);
   if (!isMatch) throw new AppError(400, "Wrong password", "Login Error");
 
-  user.currentFcmToken = currentFcmToken;
   if (!user.fcmTokens.includes(currentFcmToken)) {
     user.fcmTokens.push(currentFcmToken);
   }
   await user.save();
 
-  const accessToken = await user.generateAccessToken();
+  const accessToken = await user.generateAccessToken(currentFcmToken);
 
   // Response
   sendResponse(

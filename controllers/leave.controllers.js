@@ -13,6 +13,8 @@ const {
   NOTIFICATION_REJECT_LEAVE,
 } = require("../variables/constants");
 
+const firebaseAdmin = require("../firebaseSetup");
+
 const leaveController = {};
 
 leaveController.getCurrentUserLeaves = catchAsync(async (req, res, next) => {
@@ -251,7 +253,7 @@ leaveController.createLeave = catchAsync(async (req, res, next) => {
   let { categoryName, fromDate, toDate, type, reason } = req.body;
 
   // Business Logic Validation
-  let requestor = await User.findById(currentUserId);
+  let requestor = await User.findById(currentUserId).populate("reportTo");
   if (!requestor)
     throw new AppError(400, "User not found", "Create Leave Request Error");
   // Check leave category
@@ -361,6 +363,21 @@ leaveController.createLeave = catchAsync(async (req, res, next) => {
     leaveRequest: leaveRequest._id,
     type: "leave_submit",
     message: notiMessage,
+  });
+
+  // Send noti to firebase
+  const fcmTokensList = requestor.reportTo.fcmTokens;
+
+  fcmTokensList.forEach(async (currentFcmToken) => {
+    const message = {
+      notification: {
+        title: "Notification",
+        body: "You have new notification",
+      },
+      token: currentFcmToken,
+    };
+
+    const response = await firebaseAdmin.messaging().send(message);
   });
 
   // Response

@@ -34,7 +34,6 @@ const userSchema = Schema(
     phone: { type: String, default: "" },
     address: { type: String, default: "" },
     avatarUrl: { type: String, default: "" },
-    currentFcmToken: { type: String },
     fcmTokens: [String],
     isDeleted: { type: Boolean, default: false, select: false },
   },
@@ -47,9 +46,9 @@ userSchema.methods.toJSON = function () {
   return user;
 };
 
-userSchema.methods.generateAccessToken = async function () {
+userSchema.methods.generateAccessToken = async function (currentFcmToken) {
   const accessToken = await jwt.sign(
-    { _id: this._id, currentFcmToken: this.currentFcmToken },
+    { _id: this._id, currentFcmToken },
     JWT_SECRET_KEY,
     {
       expiresIn: "1d",
