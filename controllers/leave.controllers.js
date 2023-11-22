@@ -582,7 +582,9 @@ leaveController.deleteLeave = catchAsync(async (req, res, next) => {
   if (!requestor)
     throw new AppError(400, "User not found", "Delete Leave Request Error");
 
-  let selectedRequest = await LeaveRequest.findById(requestId);
+  let selectedRequest = await LeaveRequest.findById(requestId).populate(
+    "requestedUser"
+  );
   if (!selectedRequest)
     throw new AppError(
       400,
@@ -683,6 +685,21 @@ leaveController.approveLeave = catchAsync(async (req, res, next) => {
     message: notiMessage,
   });
 
+  // Send noti to firebase
+  const fcmTokensList = selectedRequest.requestedUser.fcmTokens;
+
+  fcmTokensList.forEach(async (currentFcmToken) => {
+    const message = {
+      notification: {
+        title: "Notification",
+        body: "You have new notification",
+      },
+      token: currentFcmToken,
+    };
+
+    const response = await firebaseAdmin.messaging().send(message);
+  });
+
   // Response
   return sendResponse(
     res,
@@ -701,7 +718,9 @@ leaveController.rejectLeave = catchAsync(async (req, res, next) => {
 
   // Business Logic Validation
   let rejectedUser = await User.findById(currentUserId).populate("role");
-  let selectedRequest = await LeaveRequest.findById(requestId);
+  let selectedRequest = await LeaveRequest.findById(requestId).populate(
+    "requestedUser"
+  );
   if (!selectedRequest)
     throw new AppError(
       400,
@@ -747,6 +766,21 @@ leaveController.rejectLeave = catchAsync(async (req, res, next) => {
     leaveRequest: selectedRequest._id,
     type: "leave_reject",
     message: notiMessage,
+  });
+
+  // Send noti to firebase
+  const fcmTokensList = selectedRequest.requestedUser.fcmTokens;
+
+  fcmTokensList.forEach(async (currentFcmToken) => {
+    const message = {
+      notification: {
+        title: "Notification",
+        body: "You have new notification",
+      },
+      token: currentFcmToken,
+    };
+
+    const response = await firebaseAdmin.messaging().send(message);
   });
 
   // Response
