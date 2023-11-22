@@ -59,4 +59,11 @@ router.put(
   authController.accountSetup
 );
 
+/**
+ * @route DELETE /auth/logout
+ * @description Log out
+ * @access Private, login require
+ */
+router.delete("/logout", authentication.loginRequired, authController.logout);
+
 module.exports = router;
