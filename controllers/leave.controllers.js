@@ -293,7 +293,7 @@ leaveController.createLeave = catchAsync(async (req, res, next) => {
     leaveCategory: category._id,
   }).populate("leaveCategory");
   const toralRemaining = leaveBalance.totalAvailable - leaveBalance.totalUsed;
-  if (toralRemaining < totalDaysLeave)
+  if (toralRemaining < totalDaysLeave && categoryName !== "unpaid_leave")
     throw new AppError(
       400,
       "Insufficient leave balance",
@@ -576,7 +576,6 @@ leaveController.deleteLeave = catchAsync(async (req, res, next) => {
   // Get data from request
   const currentUserId = req.userId;
   const requestId = req.params.requestId;
-
   // Business Logic Validation
   let requestor = await User.findById(currentUserId).populate("role");
   if (!requestor)
@@ -600,7 +599,7 @@ leaveController.deleteLeave = catchAsync(async (req, res, next) => {
     );
 
   if (requestor.role.name !== ADMIN_OFFICE) {
-    if (selectedRequest.requestedUser.toString() !== currentUserId) {
+    if (selectedRequest.requestedUser._id.toString() !== currentUserId) {
       if (selectedRequest.assignedUser.toString() !== currentUserId) {
         throw new AppError(
           400,
@@ -629,7 +628,7 @@ leaveController.deleteLeave = catchAsync(async (req, res, next) => {
   await leaveBalance.save();
 
   // Update notification
-  await Notification.deleteMany({ leaveRequest: requestId });
+  await Notification.findOneAndDelete({ leaveRequest: requestId });
 
   // Response
   return sendResponse(
