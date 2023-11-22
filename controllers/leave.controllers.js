@@ -628,6 +628,9 @@ leaveController.deleteLeave = catchAsync(async (req, res, next) => {
   leaveBalance.totalUsed -= selectedRequest.totalDays;
   await leaveBalance.save();
 
+  // Update notification
+  await Notification.deleteMany({ leaveRequest: requestId });
+
   // Response
   return sendResponse(
     res,
