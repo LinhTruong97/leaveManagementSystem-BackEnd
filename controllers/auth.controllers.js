@@ -6,16 +6,29 @@ const authController = {};
 
 authController.login = catchAsync(async (req, res, next) => {
   // Get data from request
-  const { email, password } = req.body;
+  const { email, password, currentFcmToken } = req.body;
 
   // Business Logic Validation
-  const user = await User.findOne({ email }, "+password").populate("role");
+  const user = await User.findOne(
+    { email, isDeleted: false },
+    "+password"
+  ).populate("role");
   if (!user) throw new AppError(400, "Invalid Email", "Login Error");
 
   // Process
   const isMatch = await bcrypt.compare(password, user.password);
   if (!isMatch) throw new AppError(400, "Wrong password", "Login Error");
-  const accessToken = await user.generateAccessToken();
+
+  if (user && user.status === "terminated") {
+    throw new AppError(400, "Unauthorized to login", "Login Error");
+  }
+
+  if (!user.fcmTokens.includes(currentFcmToken)) {
+    user.fcmTokens.push(currentFcmToken);
+  }
+  await user.save();
+
+  const accessToken = await user.generateAccessToken(currentFcmToken);
 
   // Response
   sendResponse(
@@ -62,5 +75,19 @@ authController.accountSetup = catchAsync(async (req, res, next) => {
 
   // Response
   sendResponse(res, 200, true, user, null, "Setup Account Successfully");
+});
+
+authController.logout = catchAsync(async (req, res, next) => {
+  const currentUserId = req.userId;
+  const currentFcmToken = req.currentFcmToken;
+
+  const user = await User.findById(currentUserId);
+
+  const fcmTokens = user.fcmTokens;
+
+  user.fcmTokens = fcmTokens.filter((token) => token !== currentFcmToken);
+  await user.save();
+
+  sendResponse(res, 201, true, null, null, "Logout successfully");
 });
 module.exports = authController;

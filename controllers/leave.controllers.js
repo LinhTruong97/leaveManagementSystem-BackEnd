@@ -13,6 +13,8 @@ const {
   NOTIFICATION_REJECT_LEAVE,
 } = require("../variables/constants");
 
+const firebaseAdmin = require("../firebaseSetup");
+
 const leaveController = {};
 
 leaveController.getCurrentUserLeaves = catchAsync(async (req, res, next) => {
@@ -251,7 +253,7 @@ leaveController.createLeave = catchAsync(async (req, res, next) => {
   let { categoryName, fromDate, toDate, type, reason } = req.body;
 
   // Business Logic Validation
-  let requestor = await User.findById(currentUserId);
+  let requestor = await User.findById(currentUserId).populate("reportTo");
   if (!requestor)
     throw new AppError(400, "User not found", "Create Leave Request Error");
   // Check leave category
@@ -291,7 +293,7 @@ leaveController.createLeave = catchAsync(async (req, res, next) => {
     leaveCategory: category._id,
   }).populate("leaveCategory");
   const toralRemaining = leaveBalance.totalAvailable - leaveBalance.totalUsed;
-  if (toralRemaining < totalDaysLeave)
+  if (toralRemaining < totalDaysLeave && categoryName !== "unpaid_leave")
     throw new AppError(
       400,
       "Insufficient leave balance",
@@ -311,6 +313,7 @@ leaveController.createLeave = catchAsync(async (req, res, next) => {
   // Check apply overlap
   const overlapRequest = await LeaveRequest.find({
     requestedUser: currentUserId,
+    status: { $ne: "rejected" },
     isDeleted: false,
     $or: [
       // Check if document's date range overlaps with or includes request date range .
@@ -361,6 +364,21 @@ leaveController.createLeave = catchAsync(async (req, res, next) => {
     leaveRequest: leaveRequest._id,
     type: "leave_submit",
     message: notiMessage,
+  });
+
+  // Send noti to firebase
+  const fcmTokensList = requestor.reportTo.fcmTokens;
+
+  fcmTokensList.forEach(async (currentFcmToken) => {
+    const message = {
+      notification: {
+        title: "Notification",
+        body: "You have new notification",
+      },
+      token: currentFcmToken,
+    };
+
+    const response = await firebaseAdmin.messaging().send(message);
   });
 
   // Response
@@ -460,6 +478,7 @@ leaveController.updateLeave = catchAsync(async (req, res, next) => {
   // Check apply overlap
   const overlapRequest = await LeaveRequest.find({
     requestedUser: currentUserId,
+    status: { $ne: "rejected" },
     isDeleted: false,
     _id: { $ne: selectedRequest._id },
     $or: [
@@ -559,13 +578,14 @@ leaveController.deleteLeave = catchAsync(async (req, res, next) => {
   // Get data from request
   const currentUserId = req.userId;
   const requestId = req.params.requestId;
-
   // Business Logic Validation
   let requestor = await User.findById(currentUserId).populate("role");
   if (!requestor)
     throw new AppError(400, "User not found", "Delete Leave Request Error");
 
-  let selectedRequest = await LeaveRequest.findById(requestId);
+  let selectedRequest = await LeaveRequest.findById(requestId).populate(
+    "requestedUser"
+  );
   if (!selectedRequest)
     throw new AppError(
       400,
@@ -581,7 +601,7 @@ leaveController.deleteLeave = catchAsync(async (req, res, next) => {
     );
 
   if (requestor.role.name !== ADMIN_OFFICE) {
-    if (selectedRequest.requestedUser.toString() !== currentUserId) {
+    if (selectedRequest.requestedUser._id.toString() !== currentUserId) {
       if (selectedRequest.assignedUser.toString() !== currentUserId) {
         throw new AppError(
           400,
@@ -602,12 +622,15 @@ leaveController.deleteLeave = catchAsync(async (req, res, next) => {
 
   // Update Leave Balance
   let leaveBalance = await LeaveBalance.findOne({
-    user: selectedRequest.requestedUser,
+    user: selectedRequest.requestedUser._id,
     leaveCategory: selectedRequest.category,
   });
 
   leaveBalance.totalUsed -= selectedRequest.totalDays;
   await leaveBalance.save();
+
+  // Update notification
+  await Notification.findOneAndDelete({ leaveRequest: requestId });
 
   // Response
   return sendResponse(
@@ -628,7 +651,9 @@ leaveController.approveLeave = catchAsync(async (req, res, next) => {
   // Business Logic Validation
   let approvedUser = await User.findById(currentUserId).populate("role");
 
-  let selectedRequest = await LeaveRequest.findById(requestId);
+  let selectedRequest = await LeaveRequest.findById(requestId).populate(
+    "requestedUser"
+  );
   if (!selectedRequest)
     throw new AppError(
       400,
@@ -660,11 +685,28 @@ leaveController.approveLeave = catchAsync(async (req, res, next) => {
   const notiMessage = NOTIFICATION_APPROVE_LEAVE;
 
   await Notification.create({
-    targetUser: selectedRequest.requestedUser,
+    targetUser: selectedRequest.requestedUser._id,
     leaveRequest: selectedRequest._id,
     type: "leave_approve",
     message: notiMessage,
   });
+
+  // Send noti to firebase
+  const fcmTokensList = selectedRequest.requestedUser.fcmTokens;
+  console.log(fcmTokensList);
+  if (fcmTokensList.length !== 0) {
+    fcmTokensList.forEach(async (currentFcmToken) => {
+      const message = {
+        notification: {
+          title: "Notification",
+          body: "You have new notification",
+        },
+        token: currentFcmToken,
+      };
+
+      const response = await firebaseAdmin.messaging().send(message);
+    });
+  }
 
   // Response
   return sendResponse(
@@ -684,7 +726,9 @@ leaveController.rejectLeave = catchAsync(async (req, res, next) => {
 
   // Business Logic Validation
   let rejectedUser = await User.findById(currentUserId).populate("role");
-  let selectedRequest = await LeaveRequest.findById(requestId);
+  let selectedRequest = await LeaveRequest.findById(requestId).populate(
+    "requestedUser"
+  );
   if (!selectedRequest)
     throw new AppError(
       400,
@@ -709,7 +753,7 @@ leaveController.rejectLeave = catchAsync(async (req, res, next) => {
     }
   }
 
-  let requestor = await User.findById(selectedRequest.requestedUser);
+  let requestor = await User.findById(selectedRequest.requestedUser._id);
   // Update Leave Balance
   let leaveBalance = await LeaveBalance.findOne({
     user: requestor._id,
@@ -726,11 +770,28 @@ leaveController.rejectLeave = catchAsync(async (req, res, next) => {
   const notiMessage = NOTIFICATION_REJECT_LEAVE;
 
   await Notification.create({
-    targetUser: selectedRequest.requestedUser,
+    targetUser: selectedRequest.requestedUser._id,
     leaveRequest: selectedRequest._id,
     type: "leave_reject",
     message: notiMessage,
   });
+
+  // Send noti to firebase
+  const fcmTokensList = selectedRequest.requestedUser.fcmTokens;
+
+  if (fcmTokensList.length !== 0) {
+    fcmTokensList.forEach(async (currentFcmToken) => {
+      const message = {
+        notification: {
+          title: "Notification",
+          body: "You have new notification",
+        },
+        token: currentFcmToken,
+      };
+
+      const response = await firebaseAdmin.messaging().send(message);
+    });
+  }
 
   // Response
   return sendResponse(
