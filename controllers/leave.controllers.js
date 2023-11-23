@@ -620,7 +620,7 @@ leaveController.deleteLeave = catchAsync(async (req, res, next) => {
 
   // Update Leave Balance
   let leaveBalance = await LeaveBalance.findOne({
-    user: selectedRequest.requestedUser,
+    user: selectedRequest.requestedUser._id,
     leaveCategory: selectedRequest.category,
   });
 
@@ -649,7 +649,9 @@ leaveController.approveLeave = catchAsync(async (req, res, next) => {
   // Business Logic Validation
   let approvedUser = await User.findById(currentUserId).populate("role");
 
-  let selectedRequest = await LeaveRequest.findById(requestId);
+  let selectedRequest = await LeaveRequest.findById(requestId).populate(
+    "requestedUser"
+  );
   if (!selectedRequest)
     throw new AppError(
       400,
@@ -681,7 +683,7 @@ leaveController.approveLeave = catchAsync(async (req, res, next) => {
   const notiMessage = NOTIFICATION_APPROVE_LEAVE;
 
   await Notification.create({
-    targetUser: selectedRequest.requestedUser,
+    targetUser: selectedRequest.requestedUser._id,
     leaveRequest: selectedRequest._id,
     type: "leave_approve",
     message: notiMessage,
@@ -689,7 +691,7 @@ leaveController.approveLeave = catchAsync(async (req, res, next) => {
 
   // Send noti to firebase
   const fcmTokensList = selectedRequest.requestedUser.fcmTokens;
-
+  console.log(fcmTokensList);
   if (fcmTokensList.length !== 0) {
     fcmTokensList.forEach(async (currentFcmToken) => {
       const message = {
@@ -749,7 +751,7 @@ leaveController.rejectLeave = catchAsync(async (req, res, next) => {
     }
   }
 
-  let requestor = await User.findById(selectedRequest.requestedUser);
+  let requestor = await User.findById(selectedRequest.requestedUser._id);
   // Update Leave Balance
   let leaveBalance = await LeaveBalance.findOne({
     user: requestor._id,
@@ -766,7 +768,7 @@ leaveController.rejectLeave = catchAsync(async (req, res, next) => {
   const notiMessage = NOTIFICATION_REJECT_LEAVE;
 
   await Notification.create({
-    targetUser: selectedRequest.requestedUser,
+    targetUser: selectedRequest.requestedUser._id,
     leaveRequest: selectedRequest._id,
     type: "leave_reject",
     message: notiMessage,
