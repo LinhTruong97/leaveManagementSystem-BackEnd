@@ -693,7 +693,6 @@ leaveController.approveLeave = catchAsync(async (req, res, next) => {
 
   // Send noti to firebase
   const fcmTokensList = selectedRequest.requestedUser.fcmTokens;
-  console.log(fcmTokensList);
   if (fcmTokensList.length !== 0) {
     fcmTokensList.forEach(async (currentFcmToken) => {
       const message = {

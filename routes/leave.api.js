@@ -9,7 +9,7 @@ const { ADMIN_OFFICE, MANAGER } = require("../variables/constants");
 const router = express.Router();
 
 /**
- * @route GET /leaves/me?page=1?&limit=5
+ * @route GET /leaves/me
  * @description Get the list of my leaves
  * @access Login required
  */
@@ -35,7 +35,7 @@ router.get(
 /**
  * @route GET /leaves/pending
  * @description Get the list of pending leaves
- * @access Login required
+ * @access Login required,limit role
  */
 router.get(
   "/pending",

@@ -44,11 +44,4 @@ router.put(
   notificationController.markRead
 );
 
-// Test send noti
-router.post(
-  "/send",
-  authentication.loginRequired,
-  notificationController.sendNotification
-);
-
 module.exports = router;

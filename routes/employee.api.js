@@ -39,7 +39,7 @@ router.post(
 );
 
 /**
- * @route GET /employees?page=1?&limit=10
+ * @route GET /employees
  * @description Get the list of full employees
  * @access Login required, limit access by role
  */

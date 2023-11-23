@@ -97,30 +97,4 @@ notificationController.markRead = catchAsync(async (req, res, next) => {
   );
 });
 
-notificationController.sendNotification = catchAsync(async (req, res, next) => {
-  // Get data from request
-  const currentFcmToken = req.currentFcmToken;
-
-  const registrationToken = currentFcmToken;
-  const message = {
-    notification: {
-      title: "Test title",
-      body: "Test body",
-    },
-    token: registrationToken,
-  };
-
-  const response = await firebaseAdmin.messaging().send(message);
-
-  // Response
-  sendResponse(
-    res,
-    200,
-    true,
-    response,
-    null,
-    "Send Notification Successfully"
-  );
-});
-
 module.exports = notificationController;
