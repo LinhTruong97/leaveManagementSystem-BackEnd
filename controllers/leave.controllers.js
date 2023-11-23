@@ -690,17 +690,19 @@ leaveController.approveLeave = catchAsync(async (req, res, next) => {
   // Send noti to firebase
   const fcmTokensList = selectedRequest.requestedUser.fcmTokens;
 
-  fcmTokensList.forEach(async (currentFcmToken) => {
-    const message = {
-      notification: {
-        title: "Notification",
-        body: "You have new notification",
-      },
-      token: currentFcmToken,
-    };
+  if (fcmTokensList.length !== 0) {
+    fcmTokensList.forEach(async (currentFcmToken) => {
+      const message = {
+        notification: {
+          title: "Notification",
+          body: "You have new notification",
+        },
+        token: currentFcmToken,
+      };
 
-    const response = await firebaseAdmin.messaging().send(message);
-  });
+      const response = await firebaseAdmin.messaging().send(message);
+    });
+  }
 
   // Response
   return sendResponse(
@@ -773,17 +775,19 @@ leaveController.rejectLeave = catchAsync(async (req, res, next) => {
   // Send noti to firebase
   const fcmTokensList = selectedRequest.requestedUser.fcmTokens;
 
-  fcmTokensList.forEach(async (currentFcmToken) => {
-    const message = {
-      notification: {
-        title: "Notification",
-        body: "You have new notification",
-      },
-      token: currentFcmToken,
-    };
+  if (fcmTokensList.length !== 0) {
+    fcmTokensList.forEach(async (currentFcmToken) => {
+      const message = {
+        notification: {
+          title: "Notification",
+          body: "You have new notification",
+        },
+        token: currentFcmToken,
+      };
 
-    const response = await firebaseAdmin.messaging().send(message);
-  });
+      const response = await firebaseAdmin.messaging().send(message);
+    });
+  }
 
   // Response
   return sendResponse(
