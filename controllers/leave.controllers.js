@@ -313,6 +313,7 @@ leaveController.createLeave = catchAsync(async (req, res, next) => {
   // Check apply overlap
   const overlapRequest = await LeaveRequest.find({
     requestedUser: currentUserId,
+    status: { $ne: "rejected" },
     isDeleted: false,
     $or: [
       // Check if document's date range overlaps with or includes request date range .
@@ -477,6 +478,7 @@ leaveController.updateLeave = catchAsync(async (req, res, next) => {
   // Check apply overlap
   const overlapRequest = await LeaveRequest.find({
     requestedUser: currentUserId,
+    status: { $ne: "rejected" },
     isDeleted: false,
     _id: { $ne: selectedRequest._id },
     $or: [
