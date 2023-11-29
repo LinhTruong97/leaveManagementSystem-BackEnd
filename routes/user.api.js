@@ -17,7 +17,7 @@ router.get("/me", authentication.loginRequired, userController.getCurrentUser);
 /**
  * @route PUT /users/:userId
  * @description  Update user profile
- * @body { gender, birthday, phone}
+ * @body
  * @access Login required
  */
 router.put(

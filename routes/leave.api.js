@@ -20,10 +20,9 @@ router.get(
 );
 
 /**
- *
  * @route GET /leaves/
  * @description Get the list of full employees leaves
- * @access Login required, limit role
+ * @access Login required, limit access by role (admin office, manager)
  */
 router.get(
   "/",
@@ -35,7 +34,7 @@ router.get(
 /**
  * @route GET /leaves/pending
  * @description Get the list of pending leaves
- * @access Login required,limit role
+ * @access Login required, limit access by role (admin office, manager)
  */
 router.get(
   "/pending",
@@ -110,7 +109,7 @@ router.post(
 /**
  * @route PUT /leaves/:requestId
  * @description Update a leave request
- * @body { fromDate, toDate, type, reason}
+ * @body { categoryName, fromDate, toDate, type, reason}
  * @limit only when status is pending
  * @access Login required
  */

@@ -152,7 +152,7 @@ router.put(
 /**
  * @route DELETE /employees/delete/:employeeId
  * @description  Delete an employee
- * @access Login required
+ * @access Login required, limit access by role (admin office)
  */
 router.delete(
   "/delete/:employeeId",
